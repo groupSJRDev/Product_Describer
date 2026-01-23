@@ -180,11 +180,30 @@ def main():
     
     reference_image = image_files[0]  # Use first image as reference
     
-    # Custom prompt (user can modify this)
-    custom_prompt = """Create a professional studio product photograph of this item.
+    # Load custom prompt from environment variable, file, or use default
+    custom_prompt_file = config.get_product_output_dir() / "generation_prompt.txt"
+    custom_prompt_env = os.getenv("GENERATION_PROMPT")
+    
+    if custom_prompt_env:
+        print("Using prompt from GENERATION_PROMPT environment variable")
+        custom_prompt = custom_prompt_env
+    elif custom_prompt_file.exists():
+        print(f"Using prompt from: {custom_prompt_file}")
+        with open(custom_prompt_file, 'r') as f:
+            custom_prompt = f.read().strip()
+    else:
+        print("Using default prompt (create temp/<PRODUCT_NAME>/generation_prompt.txt to customize)")
+        custom_prompt = """Create a professional studio product photograph of this item.
 The lighting should be clean and even, showing all details clearly.
 The background should be neutral white.
 Match the technical specifications exactly, especially colors, materials, and proportions."""
+    
+    print()
+    print("Prompt:")
+    print("-" * 70)
+    print(custom_prompt)
+    print("-" * 70)
+    print()
     
     # Generate output filename with timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

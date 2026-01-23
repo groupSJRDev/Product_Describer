@@ -319,6 +319,30 @@ poetry run python -m product_describer.generate_test
 PRODUCT_NAME=your_product poetry run python -m product_describer.generate_test
 ```
 
+### Customize Your Generation Prompt
+
+You have three ways to provide a custom prompt:
+
+**1. Create a prompt file (recommended):**
+```bash
+# Create a custom prompt file
+cat > temp/stasher_half_gallon/generation_prompt.txt << 'EOF'
+Create a futuristic holographic version of this product with neon accents.
+Show it floating in a cyberpunk environment with dramatic lighting.
+EOF
+
+# Run generation with your custom prompt
+poetry run python -m product_describer.generate_test
+```
+
+**2. Use environment variable:**
+```bash
+GENERATION_PROMPT="Show this product in a minimalist Japanese aesthetic with natural lighting" poetry run python -m product_describer.generate_test
+```
+
+**3. Use default prompt** (if no custom prompt is provided):
+- Default creates a professional studio product photograph with neutral background
+
 ### What Gets Sent to Nano Banana Pro
 
 The generation includes:

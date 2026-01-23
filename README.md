@@ -83,8 +83,15 @@ echo "GEMINI_API_KEY=your_gemini_api_key" >> .env
 # Install Google Gen AI SDK
 poetry add google-genai
 
-# Generate images from YAML specs
+# Generate images from YAML specs (uses default prompt)
 poetry run python -m product_describer.generate_test
+
+# Or create a custom prompt file
+echo "Create a vibrant, colorful version with tropical background" > temp/laptop_dell/generation_prompt.txt
+poetry run python -m product_describer.generate_test
+
+# Or use environment variable for one-off prompts
+GENERATION_PROMPT="Show in minimalist style" poetry run python -m product_describer.generate_test
 
 # Generated images saved to: temp/laptop_dell/test_images/generated_*.png
 ```
