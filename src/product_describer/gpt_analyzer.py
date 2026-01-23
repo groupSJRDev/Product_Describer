@@ -180,7 +180,7 @@ Your output will guide AI image generation, so accuracy and completeness are cri
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
-            max_tokens=4000,  # Increased for detailed technical specs
+            max_completion_tokens=4000,  # GPT-5.2 uses max_completion_tokens instead of max_tokens
             temperature=0.3,  # Lower temperature for more precise, technical output
         )
         
