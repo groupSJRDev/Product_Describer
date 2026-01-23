@@ -86,7 +86,7 @@ poetry add google-genai
 # Generate images from YAML specs
 poetry run python -m product_describer.generate_test
 
-# Generated images saved to: temp/laptop_dell/generated_*.png
+# Generated images saved to: temp/laptop_dell/test_images/generated_*.png
 ```
 
 ### Using Different GPT Models

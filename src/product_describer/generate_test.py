@@ -189,7 +189,8 @@ Match the technical specifications exactly, especially colors, materials, and pr
     
     # Generate output filename with timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_dir = config.get_product_output_dir()
+    output_dir = config.get_product_output_dir() / "test_images"
+    output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / f"generated_{timestamp}.png"
     
     # Optional: Allow customization via environment variables

@@ -331,7 +331,7 @@ The generation includes:
 
 Generated images are saved to:
 ```
-temp/<PRODUCT_NAME>/generated_<timestamp>.png
+temp/<PRODUCT_NAME>/test_images/generated_<timestamp>.png
 ```
 
 ### Features
@@ -355,5 +355,5 @@ cat temp/stasher_bag/description.yaml
 poetry run python -m product_describer.generate_test
 
 # 4. View the generated image
-open temp/stasher_bag/generated_*.png
+open temp/stasher_bag/test_images/generated_*.png
 ```
