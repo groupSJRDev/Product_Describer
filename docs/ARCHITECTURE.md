@@ -6,54 +6,40 @@ Product Describer is a modular Python application that analyzes product images u
 
 ## Architecture Diagram
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Product Describer                        │
-│                                                              │
-│  ┌────────────┐                                             │
-│  │   .env     │──────────────────┐                          │
-│  └────────────┘                  │                          │
-│                                  ▼                          │
-│  ┌──────────────────────────────────────────────┐          │
-│  │              main.py                          │          │
-│  │  (Orchestration & CLI Interface)              │          │
-│  └──────────────┬───────────────────────────────┘          │
-│                 │                                            │
-│                 ▼                                            │
-│  ┌──────────────────────────────────────────────┐          │
-│  │           config.py                           │          │
-│  │  • Load environment variables                 │          │
-│  │  • Validate configuration                     │          │
-│  │  • Manage paths                               │          │
-│  └──────────────┬───────────────────────────────┘          │
-│                 │                                            │
-│        ┌────────┴────────┐                                  │
-│        ▼                 ▼                                  │
-│  ┌─────────────┐   ┌─────────────┐                        │
-│  │image_handler│   │gpt_analyzer │                        │
-│  │.py          │   │.py          │                        │
-│  │             │   │             │                        │
-│  │• Find images│   │• Encode     │                        │
-│  │• Validate   │   │  images     │                        │
-│  │• Get info   │   │• Call GPT   │                        │
-│  │             │   │• Parse YAML │                        │
-│  └──────┬──────┘   └──────┬──────┘                        │
-│         │                  │                                │
-│         ▼                  ▼                                │
-│  ┌──────────────┐   ┌──────────────┐                      │
-│  │ data/        │   │ OpenAI API   │                      │
-│  │ <PRODUCT>    │   │ GPT Vision   │                      │
-│  │ *.jpg, *.png │   │              │                      │
-│  └──────────────┘   └──────┬───────┘                      │
-│                             │                               │
-│                             ▼                               │
-│                      ┌──────────────┐                      │
-│                      │ temp/        │                      │
-│                      │ <PRODUCT>/   │                      │
-│                      │description.  │                      │
-│                      │yaml          │                      │
-│                      └──────────────┘                      │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph "Product Describer System"
+        ENV[.env Configuration<br/>PRODUCT_NAME<br/>OPENAI_API_KEY<br/>GPT_MODEL]
+        
+        MAIN[main.py<br/>Orchestration & CLI]
+        CONFIG[config.py<br/>Configuration Management<br/>Path Resolution]
+        
+        HANDLER[image_handler.py<br/>Image Operations<br/>• Find images<br/>• Validate<br/>• Encode base64]
+        
+        ANALYZER[gpt_analyzer.py<br/>GPT Integration<br/>• API calls<br/>• Prompt management<br/>• YAML parsing]
+        
+        DATA[(data/PRODUCT_NAME/<br/>*.jpg, *.png, *.gif)]
+        API[OpenAI GPT Vision API<br/>gpt-5.2-2025-12-11]
+        OUTPUT[(temp/PRODUCT_NAME/<br/>description.yaml)]
+        
+        ENV --> CONFIG
+        CONFIG --> MAIN
+        MAIN --> HANDLER
+        MAIN --> ANALYZER
+        HANDLER --> DATA
+        ANALYZER --> API
+        API --> OUTPUT
+        HANDLER -.image metadata.-> ANALYZER
+    end
+    
+    style MAIN fill:#e1f5ff
+    style CONFIG fill:#fff3e0
+    style HANDLER fill:#f3e5f5
+    style ANALYZER fill:#e8f5e9
+    style ENV fill:#fff9c4
+    style DATA fill:#fce4ec
+    style OUTPUT fill:#fce4ec
+    style API fill:#e0f2f1
 ```
 
 ## Component Architecture
@@ -123,28 +109,44 @@ Product Describer is a modular Python application that analyzes product images u
 
 ## Data Flow
 
-```
-1. User runs application
-   ↓
-2. Load .env configuration
-   ↓
-3. Validate PRODUCT_NAME and OPENAI_API_KEY
-   ↓
-4. Scan data/<PRODUCT_NAME> for images
-   ↓
-5. Validate images (format, readability)
-   ↓
-6. Encode images to base64
-   ↓
-7. Send to GPT Vision API with system prompt
-   ↓
-8. Receive structured analysis
-   ↓
-9. Parse YAML from response
-   ↓
-10. Save to temp/<PRODUCT_NAME>/description.yaml
-    ↓
-11. Display preview to user
+```mermaid
+sequenceDiagram
+    participant User
+    participant Main as main.py
+    participant Config as config.py
+    participant Handler as image_handler.py
+    participant Analyzer as gpt_analyzer.py
+    participant API as OpenAI API
+    participant FS as File System
+    
+    User->>Main: Run application
+    Main->>Config: Load .env configuration
+    Config->>Config: Validate PRODUCT_NAME & API_KEY
+    Config-->>Main: Configuration ready
+    
+    Main->>Handler: Initialize with data path
+    Handler->>FS: Scan data/<PRODUCT_NAME>/
+    FS-->>Handler: Image files found
+    Handler->>Handler: Validate images
+    Handler-->>Main: Valid images list
+    
+    Main->>Analyzer: Initialize with API key
+    Main->>Analyzer: analyze_product(images, name)
+    
+    loop For each image
+        Analyzer->>Analyzer: Encode image to base64
+    end
+    
+    Analyzer->>API: Send images + system prompt
+    Note over API: GPT-5.2 processes images<br/>and generates analysis
+    API-->>Analyzer: YAML response
+    
+    Analyzer->>Analyzer: Parse YAML from response
+    Analyzer-->>Main: Structured product data
+    
+    Main->>FS: Create temp/<PRODUCT_NAME>/
+    Main->>FS: Write description.yaml
+    Main->>User: Display results preview
 ```
 
 ## Directory Structure

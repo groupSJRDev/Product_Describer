@@ -70,84 +70,42 @@ code temp/<PRODUCT_NAME>/description.yaml
 
 ## Execution Workflow
 
-### Phase 1: Configuration & Validation
-```
-┌─────────────────────────────────────┐
-│ Load .env file                      │
-│ • PRODUCT_NAME                      │
-│ • OPENAI_API_KEY                    │
-│ • GPT_MODEL (optional)              │
-└──────────────┬──────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────┐
-│ Validate Configuration              │
-│ • Check required variables set      │
-│ • Verify data directory exists      │
-│ • Confirm API key present           │
-└──────────────┬──────────────────────┘
-               │
-               ▼ [Pass]
-          Continue
-```
-
-### Phase 2: Image Discovery & Validation
-```
-┌─────────────────────────────────────┐
-│ Scan data/<PRODUCT_NAME>            │
-│ • Find all image files              │
-│ • Filter by supported formats       │
-└──────────────┬──────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────┐
-│ Validate Each Image                 │
-│ • Check file readability            │
-│ • Verify image format               │
-│ • Extract metadata                  │
-└──────────────┬──────────────────────┘
-               │
-               ▼ [Valid Images Found]
-          Continue
-```
-
-### Phase 3: GPT Analysis
-```
-┌─────────────────────────────────────┐
-│ Prepare API Request                 │
-│ • Encode images to base64           │
-│ • Build message payload             │
-│ • Add system prompt                 │
-└──────────────┬──────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────┐
-│ Call OpenAI API                     │
-│ • Send images + prompt              │
-│ • Wait for response                 │
-│ • Handle errors/retries             │
-└──────────────┬──────────────────────┘
-               │
-               ▼ [Success]
-          Continue
-```
-
-### Phase 4: Output Generation
-```
-┌─────────────────────────────────────┐
-│ Parse GPT Response                  │
-│ • Extract YAML content              │
-│ • Handle code blocks                │
-│ • Validate YAML structure           │
-└──────────────┬──────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────┐
-│ Save Results                        │
-│ • Create temp/<PRODUCT_NAME> dir    │
-│ • Write description.yaml            │
-│ • Display preview                   │
-└─────────────────────────────────────┘
+```mermaid
+stateDiagram-v2
+    [*] --> LoadConfig: User runs app
+    
+    state "Phase 1: Configuration" as Phase1 {
+        LoadConfig --> ValidateConfig: Load .env
+        ValidateConfig --> CheckVars: Validate
+        CheckVars --> ConfigReady: ✓ All valid
+        CheckVars --> ConfigError: ✗ Missing vars
+        ConfigError --> [*]: Exit with error
+    }
+    
+    state "Phase 2: Image Discovery" as Phase2 {
+        ConfigReady --> ScanDirectory: Scan data/PRODUCT_NAME
+        ScanDirectory --> ValidateImages: Found images
+        ScanDirectory --> NoImages: No images found
+        NoImages --> [*]: Exit with error
+        ValidateImages --> ImagesReady: ✓ Valid images
+        ValidateImages --> ImageError: ✗ Invalid images
+        ImageError --> [*]: Exit with error
+    }
+    
+    state "Phase 3: GPT Analysis" as Phase3 {
+        ImagesReady --> EncodeImages: Prepare request
+        EncodeImages --> CallAPI: Encode to base64
+        CallAPI --> ReceiveResponse: Send to GPT
+        ReceiveResponse --> ParseYAML: Got response
+        CallAPI --> APIError: API failure
+        APIError --> [*]: Exit with error
+    }
+    
+    state "Phase 4: Output" as Phase4 {
+        ParseYAML --> SaveResults: Parse YAML
+        SaveResults --> DisplayPreview: Write to file
+        DisplayPreview --> [*]: Success!
+    }
 ```
 
 ## Common Execution Scenarios
