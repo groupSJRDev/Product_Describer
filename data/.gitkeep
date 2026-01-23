@@ -1,0 +1,8 @@
+# Environment variables
+.env
+
+# Data and temp directories (keep structure but ignore contents)
+data/*
+!data/.gitkeep
+temp/*
+!temp/.gitkeep
