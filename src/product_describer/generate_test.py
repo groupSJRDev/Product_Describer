@@ -123,7 +123,6 @@ Create a professional product photograph that matches these precise specificatio
             image.save(output_path)
             image_saved = True
             print(f"✓ Generated image saved to: {output_path}")
-            print(f"  Size: {image.size}")
             print()
     
     if not image_saved:
