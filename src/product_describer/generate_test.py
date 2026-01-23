@@ -139,12 +139,12 @@ def main():
     # Load configuration
     config = Config()
     
-    # Check for Google API key
-    google_api_key = os.getenv("GOOGLE_API_KEY")
-    if not google_api_key:
-        print("❌ Error: GOOGLE_API_KEY environment variable is required")
+    # Check for Gemini API key
+    gemini_api_key = os.getenv("GEMINI_API_KEY")
+    if not gemini_api_key:
+        print("❌ Error: GEMINI_API_KEY environment variable is required")
         print("\nAdd to your .env file:")
-        print("GOOGLE_API_KEY=your_google_api_key_here")
+        print("GEMINI_API_KEY=your_gemini_api_key_here")
         print("\nGet your API key from: https://aistudio.google.com/apikey")
         sys.exit(1)
     
@@ -202,7 +202,7 @@ Match the technical specifications exactly, especially colors, materials, and pr
             yaml_specs=yaml_specs,
             custom_prompt=custom_prompt,
             output_path=output_path,
-            api_key=google_api_key,
+            api_key=gemini_api_key,
             aspect_ratio=aspect_ratio,
             resolution=resolution
         )

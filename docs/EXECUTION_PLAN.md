@@ -299,8 +299,8 @@ After generating your technical YAML description, you can use Google's Nano Bana
 # Install Google Gen AI SDK
 poetry add google-genai
 
-# Add Google API key to .env
-echo "GOOGLE_API_KEY=your_google_api_key_here" >> .env
+# Add Gemini API key to .env
+echo "GEMINI_API_KEY=your_gemini_api_key_here" >> .env
 ```
 
 ### Generate Images from YAML
