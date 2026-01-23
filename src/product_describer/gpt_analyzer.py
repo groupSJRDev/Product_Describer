@@ -140,20 +140,51 @@ Provide your analysis in a structured YAML format. Be EXTREMELY specific with me
         # Prepare messages with images
         content = [
             {
-                "type": "text",
-                "text": f"""Analyze these images of the product '{product_name}' and provide an EXTREMELY detailed technical specification in YAML format.
+  "type": "text",
+  "text": f"""
+Analyze these images of the product '{product_name}' and produce a TECHNICAL RECONSTRUCTION SPEC in YAML.
 
-FOCUS ON TECHNICAL PRECISION FOR 3D RECONSTRUCTION:
-- Measure all angles, curves, and proportions
-- Provide ALL colors in HEX format
-- Calculate width-to-height ratios
-- Describe material properties (thickness, stretch, transparency)
-- Analyze light refraction and reflection
-- Detail label specifications and relationships
-- Include liquid properties if applicable
+CRITICAL RULES (NO HALLUCINATED PRECISION):
+1) Separate OBSERVED vs INFERRED values. Do not present inferred values as exact.
+2) Only output absolute mm/in dimensions if scale is clearly anchored (dimension callout, ruler, known SKU size, printed measurement). Otherwise output ratios/percentages + a 'scale_required' note.
+3) For EVERY numeric dimension/angle/radius, include:
+   - measurement_basis (which image/view)
+   - how_measured (anchor points / pixel ratio / fitted arc)
+   - uncertainty (± mm or ± %)
+   - confidence (high/medium/low)
+4) Estimate camera pose + perspective risk per image; prefer orthographic-ish views; note when perspective could mimic geometry.
 
-Your output will guide AI image generation, so accuracy and completeness are critical."""
-            }
+OUTPUT MUST INCLUDE:
+A) Reconstruction plan:
+   - primitive_decomposition (how to model it)
+   - key constraints (what must match)
+B) Geometry:
+   - overall width/height ratio and (if scaled) absolute width/height
+   - corner radii (top vs bottom) with arc-fit notes
+   - subtle edge bows/camber/angles (e.g., top edge not perfectly straight)
+   - thickness map (panel/rim/closure) with confidence
+   - silhouette_keypoints_normalized (0..1) around outline (>= 16 points)
+   - feature keypoints (logo bbox, closure endpoints, seam path)
+C) Materials (PBR-ready):
+   - base_color HEX + variation
+   - transmission/IOR/roughness/specular/subsurface
+   - transparency/haze estimates with uncertainty
+D) Graphics/labels:
+   - placement offsets as ratios and (if scaled) mm
+E) Deformation behaviors (if flexible/soft):
+   - how shape changes when filled/gripped
+F) Consistency checks:
+   - cross-image ratio comparisons
+   - conflicts found and resolution choice
+G) Uncertainties:
+   - list the top unknowns and what extra photo would reduce them.
+
+FOCUS ON SUBTLETY:
+- Capture slight angle shifts, micro-bows, non-perfect symmetry, and soft-material relaxation.
+- Do not default to perfectly straight lines unless the images strongly support it.
+"""
+}
+
         ]
         
         # Add all images
@@ -180,24 +211,50 @@ Your output will guide AI image generation, so accuracy and completeness are cri
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
-            max_completion_tokens=4000,  # GPT-5.2 uses max_completion_tokens instead of max_tokens
+            max_completion_tokens=16000,  # Increased for GPT-5.2 with reasoning (needs tokens for both reasoning + output)
             temperature=0.3,  # Lower temperature for more precise, technical output
         )
         
         # Extract response
         response_text = response.choices[0].message.content
-        print("✓ Received response from GPT\n")
+        
+        if not response_text:
+            print("❌ ERROR: GPT returned empty response")
+            print(f"Response object: {response}")
+            raise Exception("GPT returned empty response")
+        
+        print("✓ Received response from GPT")
+        print(f"Response length: {len(response_text)} characters\n")
+        
+        # Debug: Show first 500 chars of response
+        print("Response preview:")
+        print("-" * 60)
+        print(response_text[:500])
+        print("-" * 60)
+        print()
         
         # Parse YAML from response
         # GPT might wrap YAML in code blocks, so we need to extract it
         yaml_text = self._extract_yaml_from_response(response_text)
         
+        if not yaml_text or yaml_text.strip() == "":
+            print("❌ ERROR: Extracted YAML text is empty")
+            print(f"Original response:\n{response_text}")
+            raise Exception("Could not extract YAML from GPT response")
+        
         try:
             product_data = yaml.safe_load(yaml_text)
+            
+            if product_data is None:
+                print("❌ ERROR: YAML parsed to None")
+                print(f"YAML text:\n{yaml_text}")
+                raise Exception("YAML parsing resulted in None")
+            
             return product_data
         except yaml.YAMLError as e:
-            print(f"Warning: Could not parse response as YAML: {e}")
-            print("Returning raw response as text.")
+            print(f"❌ ERROR: Could not parse response as YAML: {e}")
+            print(f"YAML text:\n{yaml_text}")
+            print("\nReturning raw response as text.")
             return {"raw_response": response_text}
     
     def _extract_yaml_from_response(self, response: str) -> str:

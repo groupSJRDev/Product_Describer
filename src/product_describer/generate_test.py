@@ -74,21 +74,30 @@ def generate_image_from_specs(
     print()
     
     # Construct the full prompt
-    full_prompt = f"""{custom_prompt}
+    full_prompt = f"""
 
-TECHNICAL SPECIFICATIONS (Use these for accuracy):
+Please generate product with these exact ratios. 
+Exact label of reference.
+No metrics on the final image.
 
 {yaml_specs}
 
-Generate a high-fidelity product image following the technical specifications above. 
+
 Pay special attention to:
 - Exact color hex codes
 - Material properties (transparency, refraction, reflection)
 - Geometry and proportions
-- Curves and angles
+- Exact curves and angles
 - Optical characteristics
 
-Create a professional product photograph that matches these precise specifications."""
+DO NOT deviate from ANY specifications.
+DO NOT add details to the product not described.
+
+
+{custom_prompt}
+
+You must follow all metric descriptions EXACTLY. Product maintains instructed color and exact dimensions.
+"""
     
     print("Generating image with Nano Banana Pro...")
     print(f"  Model: gemini-3-pro-image-preview")

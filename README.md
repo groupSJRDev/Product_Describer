@@ -21,20 +21,22 @@ A modular Python application that analyzes product images using GPT vision capab
 
 ### Installation
 
-1. **Install dependencies**:
+1. **Clone and setup**:
    ```bash
+   # Complete setup
+   make setup
+   
+   # Or manually:
    poetry install
+   cp .env.example .env
    ```
 
 2. **Configure environment**:
-   ```bash
-   cp .env.example .env
-   ```
-   
    Edit `.env` and add your settings:
    ```bash
    PRODUCT_NAME=your_product_name
    OPENAI_API_KEY=your_openai_api_key_here
+   GEMINI_API_KEY=your_gemini_api_key_here  # For image generation
    ```
 
 3. **Prepare product images**:
@@ -45,12 +47,14 @@ A modular Python application that analyzes product images using GPT vision capab
 
 4. **Run analysis**:
    ```bash
-   poetry run python -m product_describer.main
+   make describe
    ```
 
-5. **View results**:
+5. **Generate images** (optional):
    ```bash
-   cat temp/your_product_name/description.yaml
+   make generate
+   # Or with custom prompt:
+   make generate PROMPT="Show on marble background"
    ```
 
 ## Usage
