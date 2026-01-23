@@ -72,6 +72,23 @@ poetry run python -m product_describer.main
 # Results saved to: temp/laptop_dell/description.yaml
 ```
 
+### Generate Images with Nano Banana Pro
+
+After analyzing your product, you can generate new images using Google's Nano Banana Pro:
+
+```bash
+# Add Google API key to .env
+echo "GOOGLE_API_KEY=your_google_api_key" >> .env
+
+# Install Google Gen AI SDK
+poetry add google-genai
+
+# Generate images from YAML specs
+poetry run python -m product_describer.generate_test
+
+# Generated images saved to: temp/laptop_dell/generated_*.png
+```
+
 ### Using Different GPT Models
 
 ```bash
