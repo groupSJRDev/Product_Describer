@@ -25,16 +25,16 @@ from product_describer.config import Config
 
 def load_yaml_specs(yaml_path: Path) -> str:
     """Load YAML specifications and convert to formatted string.
-    
+
     Args:
         yaml_path: Path to the description YAML file.
-        
+
     Returns:
         Formatted YAML content as string.
     """
-    with open(yaml_path, 'r') as f:
+    with open(yaml_path, "r") as f:
         data = yaml.safe_load(f)
-    
+
     # Convert back to YAML string for prompt
     return yaml.dump(data, default_flow_style=False, sort_keys=False)
 
@@ -46,10 +46,10 @@ def generate_image_from_specs(
     output_path: Path,
     api_key: str,
     aspect_ratio: str = "1:1",
-    resolution: str = "2K"
+    resolution: str = "2K",
 ) -> None:
     """Generate product image using Nano Banana Pro.
-    
+
     Args:
         reference_image_path: Path to reference product image.
         yaml_specs: YAML specifications as string.
@@ -63,16 +63,16 @@ def generate_image_from_specs(
     print("Nano Banana Pro Image Generation Test")
     print("=" * 70)
     print()
-    
+
     # Initialize client
     client = genai.Client(api_key=api_key)
-    
+
     # Load reference image
     reference_image = Image.open(reference_image_path)
     print(f"Reference image: {reference_image_path.name}")
     print(f"  Size: {reference_image.size}")
     print()
-    
+
     # Construct the full prompt
     full_prompt = f"""
 
@@ -98,29 +98,28 @@ DO NOT add details to the product not described.
 
 You must follow all metric descriptions EXACTLY. Product maintains instructed color and exact dimensions.
 """
-    
+
     print("Generating image with Nano Banana Pro...")
     print(f"  Model: gemini-3-pro-image-preview")
     print(f"  Aspect Ratio: {aspect_ratio}")
     print(f"  Resolution: {resolution}")
     print()
-    
+
     # Generate content
     response = client.models.generate_content(
         model="gemini-3-pro-image-preview",
         contents=[full_prompt, reference_image],
         config=types.GenerateContentConfig(
-            response_modalities=['TEXT', 'IMAGE'],
+            response_modalities=["TEXT", "IMAGE"],
             image_config=types.ImageConfig(
-                aspect_ratio=aspect_ratio,
-                image_size=resolution
+                aspect_ratio=aspect_ratio, image_size=resolution
             ),
-        )
+        ),
     )
-    
+
     print("-" * 70)
     print()
-    
+
     # Process response
     image_saved = False
     for part in response.parts:
@@ -133,20 +132,20 @@ You must follow all metric descriptions EXACTLY. Product maintains instructed co
             image_saved = True
             print(f"✓ Generated image saved to: {output_path}")
             print()
-    
+
     if not image_saved:
         print("⚠ Warning: No image was generated in the response")
-    
+
     print("=" * 70)
 
 
 def main():
     """Main execution for image generation test."""
     print()
-    
+
     # Load configuration
     config = Config()
-    
+
     # Check for Gemini API key
     gemini_api_key = os.getenv("GEMINI_API_KEY")
     if not gemini_api_key:
@@ -155,14 +154,14 @@ def main():
         print("GEMINI_API_KEY=your_gemini_api_key_here")
         print("\nGet your API key from: https://aistudio.google.com/apikey")
         sys.exit(1)
-    
+
     if not config.product_name:
         print("❌ Error: PRODUCT_NAME environment variable is required")
         sys.exit(1)
-    
+
     print(f"Product: {config.product_name}")
     print()
-    
+
     # Check if YAML exists
     yaml_path = config.get_output_file_path()
     if not yaml_path.exists():
@@ -170,60 +169,63 @@ def main():
         print("\nRun the analysis first:")
         print(f"  poetry run python -m product_describer.main")
         sys.exit(1)
-    
+
     # Load YAML specifications
     print(f"Loading specifications from: {yaml_path}")
     yaml_specs = load_yaml_specs(yaml_path)
     print(f"✓ Loaded {len(yaml_specs)} characters of technical specs")
     print()
-    
+
     # Get reference image (use first image from data directory)
     data_dir = config.get_product_data_dir()
     from product_describer.image_handler import ImageHandler
+
     handler = ImageHandler(data_dir)
     image_files = handler.get_image_files()
-    
+
     if not image_files:
         print(f"❌ Error: No images found in {data_dir}")
         sys.exit(1)
-    
+
     reference_image = image_files[0]  # Use first image as reference
-    
+
     # Load custom prompt from environment variable, file, or use default
     custom_prompt_file = config.get_product_output_dir() / "generation_prompt.txt"
     custom_prompt_env = os.getenv("GENERATION_PROMPT")
-    
+
     if custom_prompt_env:
         print("Using prompt from GENERATION_PROMPT environment variable")
         custom_prompt = custom_prompt_env
     elif custom_prompt_file.exists():
         print(f"Using prompt from: {custom_prompt_file}")
-        with open(custom_prompt_file, 'r') as f:
+        with open(custom_prompt_file, "r") as f:
             custom_prompt = f.read().strip()
     else:
-        print("Using default prompt (create temp/<PRODUCT_NAME>/generation_prompt.txt to customize)")
+        print(
+            "Using default prompt (create temp/<PRODUCT_NAME>/generation_prompt.txt to customize)"
+        )
         custom_prompt = """Create a professional studio product photograph of this item.
 The lighting should be clean and even, showing all details clearly.
 The background should be neutral white.
 Match the technical specifications exactly, especially colors, materials, and proportions."""
-    
+
     print()
     print("Prompt:")
     print("-" * 70)
     print(custom_prompt)
     print("-" * 70)
     print()
-    
+
     # Generate output filename with timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_dir = config.get_product_output_dir() / "test_images"
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / f"generated_{timestamp}.png"
-    
+
     # Optional: Allow customization via environment variables
     aspect_ratio = os.getenv("IMAGE_ASPECT_RATIO", "1:1")
     resolution = os.getenv("IMAGE_RESOLUTION", "2K")
-    
+
     try:
         generate_image_from_specs(
             reference_image_path=reference_image,
@@ -232,11 +234,12 @@ Match the technical specifications exactly, especially colors, materials, and pr
             output_path=output_path,
             api_key=gemini_api_key,
             aspect_ratio=aspect_ratio,
-            resolution=resolution
+            resolution=resolution,
         )
     except Exception as e:
         print(f"\n❌ Error during generation: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

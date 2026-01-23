@@ -10,7 +10,7 @@ import yaml
 
 class GPTAnalyzer:
     """Analyze product images using GPT vision."""
-    
+
     SYSTEM_PROMPT = """You are a technical product analysis expert specializing in detailed specifications for 3D rendering and product reconstruction. Your analysis will guide AI image generation tools like Nano Banana Pro in accurately recreating products.
 
 Analyze the provided product images with EXTREME precision and provide highly technical measurements and specifications.
@@ -80,35 +80,35 @@ CRITICAL REQUIREMENTS - Include all applicable details:
 - Structural support elements
 
 Provide your analysis in a structured YAML format. Be EXTREMELY specific with measurements, ratios, angles, and hex color codes. If you cannot measure something exactly, provide your best technical estimate with qualifiers. Every measurement matters for accurate reconstruction."""
-    
+
     def __init__(self, api_key: str, model: str = "gpt-5.2-2025-12-11"):
         """Initialize GPT analyzer.
-        
+
         Args:
             api_key: OpenAI API key.
             model: GPT model to use for analysis.
         """
         self.client = OpenAI(api_key=api_key)
         self.model = model
-    
+
     def _encode_image(self, image_path: Path) -> str:
         """Encode image to base64.
-        
+
         Args:
             image_path: Path to the image file.
-            
+
         Returns:
             Base64 encoded string.
         """
         with open(image_path, "rb") as image_file:
             return base64.b64encode(image_file.read()).decode("utf-8")
-    
+
     def _get_image_mime_type(self, image_path: Path) -> str:
         """Get MIME type for image.
-        
+
         Args:
             image_path: Path to the image file.
-            
+
         Returns:
             MIME type string.
         """
@@ -121,27 +121,27 @@ Provide your analysis in a structured YAML format. Be EXTREMELY specific with me
             ".webp": "image/webp",
         }
         return mime_types.get(ext, "image/jpeg")
-    
+
     def analyze_product(self, image_paths: List[Path], product_name: str) -> dict:
         """Analyze product images and return structured data.
-        
+
         Args:
             image_paths: List of paths to product images.
             product_name: Name of the product being analyzed.
-            
+
         Returns:
             Dictionary containing product analysis.
-            
+
         Raises:
             Exception: If GPT API call fails.
         """
         print(f"Analyzing {len(image_paths)} images for product: {product_name}")
-        
+
         # Prepare messages with images
         content = [
             {
-  "type": "text",
-  "text": f"""
+                "type": "text",
+                "text": f"""
 Analyze these images of the product '{product_name}' and produce a TECHNICAL RECONSTRUCTION SPEC in YAML.
 
 CRITICAL RULES (NO HALLUCINATED PRECISION):
@@ -182,30 +182,31 @@ G) Uncertainties:
 FOCUS ON SUBTLETY:
 - Capture slight angle shifts, micro-bows, non-perfect symmetry, and soft-material relaxation.
 - Do not default to perfectly straight lines unless the images strongly support it.
-"""
-}
-
+""",
+            }
         ]
-        
+
         # Add all images
         for i, image_path in enumerate(image_paths, 1):
             base64_image = self._encode_image(image_path)
             mime_type = self._get_image_mime_type(image_path)
-            
-            content.append({
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:{mime_type};base64,{base64_image}",
-                    "detail": "high"
+
+            content.append(
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:{mime_type};base64,{base64_image}",
+                        "detail": "high",
+                    },
                 }
-            })
+            )
             print(f"  - Added image {i}: {image_path.name}")
-        
+
         messages = [
             {"role": "system", "content": self.SYSTEM_PROMPT},
-            {"role": "user", "content": content}
+            {"role": "user", "content": content},
         ]
-        
+
         # Call GPT API
         print(f"\nCalling GPT model: {self.model}...")
         response = self.client.chat.completions.create(
@@ -214,55 +215,55 @@ FOCUS ON SUBTLETY:
             max_completion_tokens=16000,  # Increased for GPT-5.2 with reasoning (needs tokens for both reasoning + output)
             temperature=0.3,  # Lower temperature for more precise, technical output
         )
-        
+
         # Extract response
         response_text = response.choices[0].message.content
-        
+
         if not response_text:
             print("❌ ERROR: GPT returned empty response")
             print(f"Response object: {response}")
             raise Exception("GPT returned empty response")
-        
+
         print("✓ Received response from GPT")
         print(f"Response length: {len(response_text)} characters\n")
-        
+
         # Debug: Show first 500 chars of response
         print("Response preview:")
         print("-" * 60)
         print(response_text[:500])
         print("-" * 60)
         print()
-        
+
         # Parse YAML from response
         # GPT might wrap YAML in code blocks, so we need to extract it
         yaml_text = self._extract_yaml_from_response(response_text)
-        
+
         if not yaml_text or yaml_text.strip() == "":
             print("❌ ERROR: Extracted YAML text is empty")
             print(f"Original response:\n{response_text}")
             raise Exception("Could not extract YAML from GPT response")
-        
+
         try:
             product_data = yaml.safe_load(yaml_text)
-            
+
             if product_data is None:
                 print("❌ ERROR: YAML parsed to None")
                 print(f"YAML text:\n{yaml_text}")
                 raise Exception("YAML parsing resulted in None")
-            
+
             return product_data
         except yaml.YAMLError as e:
             print(f"❌ ERROR: Could not parse response as YAML: {e}")
             print(f"YAML text:\n{yaml_text}")
             print("\nReturning raw response as text.")
             return {"raw_response": response_text}
-    
+
     def _extract_yaml_from_response(self, response: str) -> str:
         """Extract YAML content from GPT response.
-        
+
         Args:
             response: Raw response from GPT.
-            
+
         Returns:
             Extracted YAML text.
         """

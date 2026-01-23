@@ -1,7 +1,7 @@
 # Product Describer Makefile
 # Simplifies common operations for analyzing and generating product images
 
-.PHONY: help describe generate test install setup clean
+.PHONY: help describe generate test install setup clean format lint
 
 # Default target - show help
 help:
@@ -23,6 +23,10 @@ help:
 	@echo "With custom prompt:"
 	@echo "  make generate PROMPT='Your custom prompt here'"
 	@echo "  make test PROMPT='Show product on marble background'"
+	@echo ""
+	@echo "Code Quality:"
+	@echo "  make format         Format code with Black"
+	@echo "  make lint           Run linters (flake8 and mypy)"
 	@echo ""
 	@echo "Utilities:"
 	@echo "  make clean          Remove generated files and caches"
@@ -73,6 +77,22 @@ generate:
 
 # Alias for generate
 test: generate
+
+# Format code with Black
+format:
+	@echo "Formatting code with Black..."
+	@poetry run black src/ tests/
+	@echo "✓ Code formatted"
+
+# Run linters
+lint:
+	@echo "Running linters..."
+	@echo "Flake8:"
+	@poetry run flake8 src/ tests/ || true
+	@echo ""
+	@echo "MyPy:"
+	@poetry run mypy src/ || true
+	@echo "✓ Linting complete"
 
 # Clean generated files and caches
 clean:

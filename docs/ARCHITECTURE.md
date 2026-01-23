@@ -9,37 +9,55 @@ Product Describer is a modular Python application that analyzes product images u
 ```mermaid
 graph TB
     subgraph "Product Describer System"
-        ENV[.env Configuration<br/>PRODUCT_NAME<br/>OPENAI_API_KEY<br/>GPT_MODEL]
+        ENV[.env Configuration<br/>PRODUCT_NAME<br/>OPENAI_API_KEY<br/>GEMINI_API_KEY<br/>GPT_MODEL]
+        
+        MAKE[Makefile<br/>Automation<br/>• setup<br/>• describe<br/>• generate<br/>• format<br/>• lint]
         
         MAIN[main.py<br/>Orchestration & CLI]
         CONFIG[config.py<br/>Configuration Management<br/>Path Resolution]
         
         HANDLER[image_handler.py<br/>Image Operations<br/>• Find images<br/>• Validate<br/>• Encode base64]
         
-        ANALYZER[gpt_analyzer.py<br/>GPT Integration<br/>• API calls<br/>• Prompt management<br/>• YAML parsing]
+        ANALYZER[gpt_analyzer.py<br/>GPT Integration<br/>• API calls<br/>• Prompt management<br/>• YAML parsing<br/>• Error handling]
+        
+        GENERATOR[generate_test.py<br/>Image Generation<br/>• Load YAML specs<br/>• Custom prompts<br/>• Gemini integration]
         
         DATA[(data/PRODUCT_NAME/<br/>*.jpg, *.png, *.gif)]
-        API[OpenAI GPT Vision API<br/>gpt-5.2-2025-12-11]
+        API[OpenAI GPT Vision API<br/>gpt-5.2-2025-12-11<br/>16K tokens]
+        GEMINI[Google Gemini API<br/>gemini-3-pro-image-preview<br/>Nano Banana Pro]
         OUTPUT[(temp/PRODUCT_NAME/<br/>description.yaml)]
+        IMAGES[(temp/PRODUCT_NAME/test_images/<br/>generated_*.png)]
         
         ENV --> CONFIG
+        ENV --> MAKE
+        MAKE --> MAIN
+        MAKE --> GENERATOR
         CONFIG --> MAIN
+        CONFIG --> GENERATOR
         MAIN --> HANDLER
         MAIN --> ANALYZER
         HANDLER --> DATA
         ANALYZER --> API
         API --> OUTPUT
+        OUTPUT --> GENERATOR
+        GENERATOR --> GEMINI
+        GEMINI --> IMAGES
         HANDLER -.image metadata.-> ANALYZER
+        HANDLER -.reference image.-> GENERATOR
     end
     
     style MAIN fill:#e1f5ff
     style CONFIG fill:#fff3e0
     style HANDLER fill:#f3e5f5
     style ANALYZER fill:#e8f5e9
+    style GENERATOR fill:#e1bee7
+    style MAKE fill:#c5cae9
     style ENV fill:#fff9c4
     style DATA fill:#fce4ec
     style OUTPUT fill:#fce4ec
+    style IMAGES fill:#fce4ec
     style API fill:#e0f2f1
+    style GEMINI fill:#b2dfdb
 ```
 
 ## Component Architecture
@@ -66,7 +84,11 @@ graph TB
 **Environment Variables**:
 - `PRODUCT_NAME` (required): Product identifier
 - `OPENAI_API_KEY` (required): OpenAI authentication
+- `GEMINI_API_KEY` (optional): Google Gemini authentication for image generation
 - `GPT_MODEL` (optional): Model version (default: gpt-5.2-2025-12-11)
+- `GENERATION_PROMPT` (optional): Custom prompt for image generation
+- `IMAGE_ASPECT_RATIO` (optional): Output aspect ratio (default: 1:1)
+- `IMAGE_RESOLUTION` (optional): Output resolution (default: 2K)
 
 ### 3. Image Processing: `image_handler.py`
 **Responsibility**: Image file operations and validation
@@ -90,9 +112,47 @@ graph TB
 
 **API Configuration**:
 - Model: Configurable (default: gpt-5.2-2025-12-11)
-- Max Tokens: 2000
-- Temperature: 0.7
+- Max Completion Tokens: 16000 (increased for GPT-5.2 reasoning model)
+- Temperature: 0.3 (lower for technical precision)
 - Image Detail: High
+
+**Error Handling**:
+- Empty response detection with detailed logging
+- YAML parsing validation
+- Response preview for debugging
+- Comprehensive error messages with troubleshooting context
+
+### 5. Image Generation: `generate_test.py`
+**Responsibility**: Generate product images using Nano Banana Pro (Google Gemini)
+
+**Key Functions**:
+- `load_yaml_specs()`: Load technical specifications from YAML
+- `generate_image_from_specs()`: Generate image via Gemini API
+- `main()`: Orchestrate generation workflow
+
+**API Configuration**:
+- Model: gemini-3-pro-image-preview
+- Aspect Ratio: Configurable (default: 1:1)
+- Resolution: Configurable (default: 2K)
+- Prompt customization: File, environment variable, or default
+
+**Prompt Structure**:
+- YAML specifications embedded in prompt
+- Emphasis on exact measurements and colors
+- Custom instructions (e.g., background, styling)
+- Strict adherence to technical specs
+
+### 6. Build Automation: `Makefile`
+**Responsibility**: Simplify common development and operational tasks
+
+**Targets**:
+- `make setup`: Complete project initialization
+- `make describe`: Run product analysis
+- `make generate`: Generate images (with optional PROMPT parameter)
+- `make format`: Format code with Black
+- `make lint`: Run linters (flake8, mypy)
+- `make clean`: Remove caches and temporary files
+- `make workflow`: Complete analysis + generation pipeline
 
 **System Prompt**: Instructs GPT to analyze products and return structured YAML with facets including:
 - Product Type
@@ -159,17 +219,22 @@ product-describer/
 │       ├── main.py              # Entry point & orchestration
 │       ├── config.py             # Configuration management
 │       ├── image_handler.py      # Image operations
-│       └── gpt_analyzer.py       # GPT API integration
+│       ├── gpt_analyzer.py       # GPT API integration
+│       └── generate_test.py      # Nano Banana Pro image generation
 ├── tests/                        # Unit tests
 ├── data/                         # Input: Product images
 │   └── <PRODUCT_NAME>/
 │       ├── image1.jpg
 │       ├── image2.png
 │       └── ...
-├── temp/                         # Output: Generated descriptions
+├── temp/                         # Output: Generated files
 │   └── <PRODUCT_NAME>/
-│       └── description.yaml
+│       ├── description.yaml      # Technical specifications
+│       ├── generation_prompt.txt # Optional custom prompt
+│       └── test_images/          # Generated images
+│           └── generated_*.png
 ├── docs/                         # Documentation
+├── Makefile                      # Build automation
 ├── .env                          # Environment configuration
 ├── .env.example                  # Configuration template
 ├── pyproject.toml                # Poetry dependencies
@@ -198,12 +263,16 @@ Each module has a single, well-defined responsibility with clear interfaces.
 
 ## Technology Stack
 
-- **Language**: Python 3.9+
-- **Package Manager**: Poetry
-- **AI/ML**: OpenAI GPT Vision API
+- **Language**: Python 3.10+ (required for google-genai)
+- **Package Manager**: Poetry 2.1.3+
+- **AI/ML**: 
+  - OpenAI GPT-5.2 Vision API (product analysis)
+  - Google Gemini 3 Pro Image API (image generation)
 - **Image Processing**: Pillow (PIL)
 - **Data Format**: YAML
 - **Configuration**: python-dotenv
+- **Code Quality**: Black, Flake8, MyPy
+- **Automation**: Make
 
 ## Security Considerations
 
@@ -227,13 +296,24 @@ Each module has a single, well-defined responsibility with clear interfaces.
 - **Image Detail**: High detail mode for better analysis
 - **Rate Limiting**: Handled by OpenAI SDK
 
+## Recent Enhancements (Completed)
+
+- [x] Nano Banana Pro (Google Gemini) image generation integration
+- [x] Makefile automation for common tasks
+- [x] Code formatting with Black
+- [x] Enhanced error handling with detailed debugging
+- [x] GPT-5.2 support with increased token limits (16K)
+- [x] Customizable generation prompts (file, env var, default)
+- [x] Organized output structure (test_images subdirectory)
+
 ## Future Enhancements
 
 - [ ] Support for batch processing multiple products
-- [ ] Custom prompt templates
 - [ ] Alternative output formats (JSON, CSV)
 - [ ] Image preprocessing (resize, optimize)
 - [ ] Caching of API responses
 - [ ] Web interface
 - [ ] Progress indicators for large batches
 - [ ] Validation schemas for YAML output
+- [ ] CI/CD pipeline integration
+- [ ] Docker containerization
