@@ -1,8 +1,10 @@
-# Potential Prompt Improvements for Nano Banana Pro
+# Analysis Prompt Improvements for GPT Vision
 
 ## Overview
 
-This document outlines potential improvements and experiments to enhance generation accuracy for Nano Banana Pro (Gemini 3 Pro Image). These are untested hypotheses that could be implemented and A/B tested against the current approach.
+This document outlines potential improvements for the GPT Vision analysis prompt (in `gpt_analyzer.py`) that generates detailed YAML specifications from product images. These are untested hypotheses that could be implemented and A/B tested against the current approach.
+
+**Note**: This is separate from the generation prompt used by Nano Banana Pro. For generation prompt improvements, see `GENERATION_PROMPT_IMPROVEMENTS.md`.
 
 ---
 
