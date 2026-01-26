@@ -29,6 +29,83 @@ from product_describer.logger import setup_logger
 logger = setup_logger(__name__)
 
 
+def _extract_key_specifications(specs: Dict[str, Any]) -> Dict[str, str]:
+    """Extract key specifications for prompt emphasis.
+
+    Args:
+        specs: Product specifications dictionary
+
+    Returns:
+        Dictionary with 'critical' specifications formatted for prompt
+    """
+    critical_items = []
+
+    # Extract dimensions if available
+    if "dimensions" in specs and "primary" in specs["dimensions"]:
+        dims = specs["dimensions"]["primary"]
+        if "width" in dims and dims["width"].get("value"):
+            critical_items.append(
+                f"- Width: {dims['width']['value']}{dims['width'].get('unit', 'mm')}"
+            )
+        if "height" in dims and dims["height"].get("value"):
+            critical_items.append(
+                f"- Height: {dims['height']['value']}{dims['height'].get('unit', 'mm')}"
+            )
+        if "depth" in dims and dims["depth"].get("value"):
+            critical_items.append(
+                f"- Depth: {dims['depth']['value']}{dims['depth'].get('unit', 'mm')}"
+            )
+
+    # Extract colors if available
+    if "colors" in specs:
+        colors_data = specs["colors"]
+        if "primary" in colors_data and colors_data["primary"].get("hex"):
+            critical_items.append(
+                f"- Primary color: {colors_data['primary']['hex']} ({colors_data['primary'].get('name', 'unnamed')})"
+            )
+        if "secondary" in colors_data and colors_data["secondary"].get("hex"):
+            critical_items.append(
+                f"- Secondary color: {colors_data['secondary']['hex']} ({colors_data['secondary'].get('name', 'unnamed')})"
+            )
+
+    # Extract material type if available
+    if "materials" in specs and "primary_material" in specs["materials"]:
+        mat = specs["materials"]["primary_material"]
+        if mat.get("type"):
+            critical_items.append(f"- Material: {mat['type']}")
+        if mat.get("finish"):
+            critical_items.append(f"- Finish: {mat['finish']}")
+
+    # Extract transparency if available
+    if (
+        "materials" in specs
+        and "optical_properties" in specs["materials"]
+        and "transparency" in specs["materials"]["optical_properties"]
+    ):
+        trans = specs["materials"]["optical_properties"]["transparency"]
+        if trans.get("type") and trans.get("percentage"):
+            critical_items.append(
+                f"- Transparency: {trans['type']} ({trans['percentage']}%)"
+            )
+
+    # Extract label info if available
+    if "labels" in specs and specs["labels"].get("present"):
+        if "primary_label" in specs["labels"]:
+            label = specs["labels"]["primary_label"]
+            if "content" in label and label["content"].get("text_content"):
+                critical_items.append(
+                    f"- Label text: '{label['content']['text_content']}'"
+                )
+            if "position" in label and label.get("position"):
+                critical_items.append(f"- Label position: {label['position']}")
+
+    return {
+        "critical": "\n".join(critical_items)
+        if critical_items
+        else "- See full specifications below"
+    }
+
+
 def load_yaml_specs(yaml_path: Path) -> str:
     """Load YAML specifications and convert to formatted string.
 
@@ -52,6 +129,7 @@ def load_yaml_specs(yaml_path: Path) -> str:
 def generate_image_from_specs(
     reference_image_path: Path,
     yaml_specs: str,
+    specs_dict: Dict[str, Any],
     custom_prompt: str,
     output_path: Path,
     api_key: str,
@@ -63,6 +141,7 @@ def generate_image_from_specs(
     Args:
         reference_image_path: Path to reference product image.
         yaml_specs: YAML specifications as string.
+        specs_dict: Parsed specifications dictionary for extraction.
         custom_prompt: Custom generation prompt.
         output_path: Where to save the generated image.
         api_key: Google API key.
@@ -85,30 +164,44 @@ def generate_image_from_specs(
     logger.info(f"Reference image: {reference_image_path.name}")
     logger.info(f"  Size: {reference_image.size}")
 
-    # Construct the full prompt
+    # Extract key specifications for emphasis
+    key_specs = _extract_key_specifications(specs_dict)
+
+    # Construct the full prompt with structured priorities
     full_prompt = f"""
 
-Please generate product with these exact ratios. 
-Exact label of reference.
-No metrics on the final image.
+You are generating a product image from technical specifications and a reference image.
 
+CRITICAL REQUIREMENTS (Must be exact - within ±2%):
+{key_specs['critical']}
+
+FULL TECHNICAL SPECIFICATIONS:
 {yaml_specs}
 
-
-Pay special attention to:
-- Exact color hex codes
+IMPORTANT DETAILS (Match as closely as possible):
 - Material properties (transparency, refraction, reflection)
-- Geometry and proportions
-- Exact curves and angles
+- Surface textures and finish
+- Edge radii and curves
 - Optical characteristics
+- Shadow and highlight behavior
 
-DO NOT deviate from ANY specifications.
-DO NOT add details to the product not described.
+STRICT GUIDELINES:
+- DO NOT deviate from color hex codes
+- DO NOT add details to the product not described
+- DO NOT show metrics or measurements on the final image
+- Exact label text and placement from reference
+- Product maintains instructed dimensions and proportions
 
+TOLERANCE STANDARDS:
+- Colors: Within ±2% of hex value
+- Dimensions: Within ±2% of specified measurements  
+- Angles: Within ±2 degrees
+- Transparency: Within ±5%
 
 {custom_prompt}
 
-You must follow all metric descriptions EXACTLY. Product maintains instructed color and exact dimensions.
+Generate a photorealistic product image following ALL specifications EXACTLY. 
+Match the reference image style while adhering to the technical measurements provided.
 """
 
     logger.info("Generating image with Nano Banana Pro...")
@@ -183,6 +276,10 @@ def main() -> None:
     yaml_specs = load_yaml_specs(yaml_path)
     logger.info(f"Loaded {len(yaml_specs)} characters of technical specs")
 
+    # Also load as dictionary for key extraction
+    with open(yaml_path, "r") as f:
+        specs_dict = yaml.safe_load(f)
+
     # Get reference image (use first image from data directory)
     data_dir = config.get_product_data_dir()
     from product_describer.image_handler import ImageHandler
@@ -236,6 +333,7 @@ Match the technical specifications exactly, especially colors, materials, and pr
         generate_image_from_specs(
             reference_image_path=reference_image,
             yaml_specs=yaml_specs,
+            specs_dict=specs_dict,
             custom_prompt=custom_prompt,
             output_path=output_path,
             api_key=gemini_api_key,
