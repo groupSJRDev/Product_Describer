@@ -2,17 +2,18 @@
 
 import base64
 from pathlib import Path
-from typing import List
+from typing import Dict, List, Tuple
 
 from PIL import Image
+
+from product_describer.constants import SUPPORTED_IMAGE_FORMATS, WARN_IMAGE_SIZE_MB
+from product_describer.exceptions import ImageValidationError
 
 
 class ImageHandler:
     """Handle image operations for product analysis."""
 
-    SUPPORTED_FORMATS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
-
-    def __init__(self, data_dir: Path):
+    def __init__(self, data_dir: Path) -> None:
         """Initialize image handler.
 
         Args:
@@ -27,7 +28,7 @@ class ImageHandler:
             List of Path objects for image files, sorted by name.
         """
         image_files = []
-        for ext in self.SUPPORTED_FORMATS:
+        for ext in SUPPORTED_IMAGE_FORMATS:
             image_files.extend(self.data_dir.glob(f"*{ext}"))
             image_files.extend(self.data_dir.glob(f"*{ext.upper()}"))
 
@@ -45,7 +46,7 @@ class ImageHandler:
         with open(image_path, "rb") as image_file:
             return base64.b64encode(image_file.read()).decode("utf-8")
 
-    def get_image_info(self, image_path: Path) -> dict:
+    def get_image_info(self, image_path: Path) -> Dict[str, any]:
         """Get basic information about an image.
 
         Args:
@@ -62,7 +63,7 @@ class ImageHandler:
                 "mode": img.mode,
             }
 
-    def validate_images(self) -> tuple[List[Path], List[str]]:
+    def validate_images(self) -> Tuple[List[Path], List[str]]:
         """Validate all images in the data directory.
 
         Returns:

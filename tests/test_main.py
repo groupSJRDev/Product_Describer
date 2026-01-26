@@ -1,15 +1,17 @@
 """Tests for the main module."""
 
-import pytest
-from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
-import tempfile
 import os
+import tempfile
+from pathlib import Path
+from unittest.mock import MagicMock, Mock, patch
 
+import pytest
+
+from product_describer.exceptions import ConfigurationError
 from product_describer.main import main
 
 
-def test_main_missing_product_name(monkeypatch, capsys):
+def test_main_missing_product_name(monkeypatch, caplog) -> None:
     """Test main exits gracefully when PRODUCT_NAME is missing."""
     monkeypatch.delenv("PRODUCT_NAME", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
@@ -18,12 +20,11 @@ def test_main_missing_product_name(monkeypatch, capsys):
         main()
 
     assert exc_info.value.code == 1
-    captured = capsys.readouterr()
-    assert "Configuration Error" in captured.out
-    assert "PRODUCT_NAME" in captured.out
+    assert "Configuration Error" in caplog.text
+    assert "PRODUCT_NAME" in caplog.text
 
 
-def test_main_missing_api_key(monkeypatch, capsys):
+def test_main_missing_api_key(monkeypatch, caplog) -> None:
     """Test main exits gracefully when OPENAI_API_KEY is missing."""
     monkeypatch.setenv("PRODUCT_NAME", "test_product")
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
@@ -38,11 +39,10 @@ def test_main_missing_api_key(monkeypatch, capsys):
             main()
 
         assert exc_info.value.code == 1
-        captured = capsys.readouterr()
-        assert "Configuration Error" in captured.out or "OPENAI_API_KEY" in captured.out
+        assert "Configuration Error" in caplog.text or "OPENAI_API_KEY" in caplog.text
 
 
-def test_main_no_images(monkeypatch, capsys):
+def test_main_no_images(monkeypatch, caplog) -> None:
     """Test main exits when no images are found."""
     monkeypatch.setenv("PRODUCT_NAME", "test_product")
     monkeypatch.setenv("OPENAI_API_KEY", "test_key")
@@ -57,7 +57,6 @@ def test_main_no_images(monkeypatch, capsys):
             main()
 
         assert exc_info.value.code == 1
-        captured = capsys.readouterr()
         assert (
-            "No valid images found" in captured.out or "No images found" in captured.out
+            "No valid images found" in caplog.text or "No images found" in caplog.text
         )

@@ -6,6 +6,9 @@ from typing import Optional
 
 from dotenv import load_dotenv
 
+from product_describer.constants import DEFAULT_GPT_MODEL
+from product_describer.exceptions import ConfigurationError
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -13,11 +16,11 @@ load_dotenv()
 class Config:
     """Application configuration."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize configuration from environment variables."""
         self.product_name: Optional[str] = os.getenv("PRODUCT_NAME")
         self.openai_api_key: Optional[str] = os.getenv("OPENAI_API_KEY")
-        self.gpt_model: str = os.getenv("GPT_MODEL", "gpt-5.2-2025-12-11")
+        self.gpt_model: str = os.getenv("GPT_MODEL", DEFAULT_GPT_MODEL)
 
         # Base directories
         self.base_dir = Path.cwd()
@@ -31,10 +34,10 @@ class Config:
             Path: Path to data/<PRODUCT_NAME> directory.
 
         Raises:
-            ValueError: If PRODUCT_NAME is not set.
+            ConfigurationError: If PRODUCT_NAME is not set.
         """
         if not self.product_name:
-            raise ValueError("PRODUCT_NAME environment variable is not set")
+            raise ConfigurationError("PRODUCT_NAME environment variable is not set")
         return self.data_dir / self.product_name
 
     def get_product_output_dir(self) -> Path:
@@ -44,10 +47,10 @@ class Config:
             Path: Path to temp/<PRODUCT_NAME> directory.
 
         Raises:
-            ValueError: If PRODUCT_NAME is not set.
+            ConfigurationError: If PRODUCT_NAME is not set.
         """
         if not self.product_name:
-            raise ValueError("PRODUCT_NAME environment variable is not set")
+            raise ConfigurationError("PRODUCT_NAME environment variable is not set")
         return self.temp_dir / self.product_name
 
     def get_output_file_path(self) -> Path:
@@ -62,17 +65,17 @@ class Config:
         """Validate configuration.
 
         Raises:
-            ValueError: If required configuration is missing.
+            ConfigurationError: If required configuration is missing.
         """
         if not self.product_name:
-            raise ValueError("PRODUCT_NAME environment variable is required")
+            raise ConfigurationError("PRODUCT_NAME environment variable is required")
         if not self.openai_api_key:
-            raise ValueError("OPENAI_API_KEY environment variable is required")
+            raise ConfigurationError("OPENAI_API_KEY environment variable is required")
 
         # Check if product data directory exists
         data_dir = self.get_product_data_dir()
         if not data_dir.exists():
-            raise ValueError(
+            raise ConfigurationError(
                 f"Product data directory does not exist: {data_dir}\n"
                 f"Please create it and add product images."
             )

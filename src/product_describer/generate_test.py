@@ -6,8 +6,9 @@ using Google's Gemini 3 Pro Image model (Nano Banana Pro).
 
 import os
 import sys
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+from typing import Dict, Any
 
 import yaml
 from PIL import Image
@@ -21,6 +22,11 @@ except ImportError:
     sys.exit(1)
 
 from product_describer.config import Config
+from product_describer.constants import GENERATION_PROMPT_FILENAME
+from product_describer.exceptions import ConfigurationError, APIError
+from product_describer.logger import setup_logger
+
+logger = setup_logger(__name__)
 
 
 def load_yaml_specs(yaml_path: Path) -> str:
@@ -31,6 +37,10 @@ def load_yaml_specs(yaml_path: Path) -> str:
 
     Returns:
         Formatted YAML content as string.
+
+    Raises:
+        FileNotFoundError: If YAML file doesn't exist.
+        yaml.YAMLError: If YAML file is malformed.
     """
     with open(yaml_path, "r") as f:
         data = yaml.safe_load(f)
@@ -58,20 +68,22 @@ def generate_image_from_specs(
         api_key: Google API key.
         aspect_ratio: Image aspect ratio (e.g., "1:1", "16:9").
         resolution: Image resolution ("1K", "2K", or "4K").
+
+    Raises:
+        APIError: If image generation fails.
+        FileNotFoundError: If reference image doesn't exist.
     """
-    print("=" * 70)
-    print("Nano Banana Pro Image Generation Test")
-    print("=" * 70)
-    print()
+    logger.info("=" * 70)
+    logger.info("Nano Banana Pro Image Generation Test")
+    logger.info("=" * 70)
 
     # Initialize client
     client = genai.Client(api_key=api_key)
 
     # Load reference image
     reference_image = Image.open(reference_image_path)
-    print(f"Reference image: {reference_image_path.name}")
-    print(f"  Size: {reference_image.size}")
-    print()
+    logger.info(f"Reference image: {reference_image_path.name}")
+    logger.info(f"  Size: {reference_image.size}")
 
     # Construct the full prompt
     full_prompt = f"""
@@ -99,11 +111,10 @@ DO NOT add details to the product not described.
 You must follow all metric descriptions EXACTLY. Product maintains instructed color and exact dimensions.
 """
 
-    print("Generating image with Nano Banana Pro...")
-    print(f"  Model: gemini-3-pro-image-preview")
-    print(f"  Aspect Ratio: {aspect_ratio}")
-    print(f"  Resolution: {resolution}")
-    print()
+    logger.info("Generating image with Nano Banana Pro...")
+    logger.info(f"  Model: gemini-3-pro-image-preview")
+    logger.info(f"  Aspect Ratio: {aspect_ratio}")
+    logger.info(f"  Resolution: {resolution}")
 
     # Generate content
     response = client.models.generate_content(
@@ -117,64 +128,60 @@ You must follow all metric descriptions EXACTLY. Product maintains instructed co
         ),
     )
 
-    print("-" * 70)
-    print()
+    logger.info("-" * 70)
 
     # Process response
     image_saved = False
     for part in response.parts:
         if part.text is not None:
-            print("Model Response:")
-            print(part.text)
-            print()
+            logger.info("Model Response:")
+            logger.info(part.text)
         elif image := part.as_image():
             image.save(output_path)
             image_saved = True
-            print(f"✓ Generated image saved to: {output_path}")
-            print()
+            logger.info(f"Generated image saved to: {output_path}")
 
     if not image_saved:
-        print("⚠ Warning: No image was generated in the response")
+        logger.warning("No image was generated in the response")
 
-    print("=" * 70)
+    logger.info("=" * 70)
 
 
-def main():
+def main() -> None:
     """Main execution for image generation test."""
-    print()
-
     # Load configuration
     config = Config()
 
     # Check for Gemini API key
     gemini_api_key = os.getenv("GEMINI_API_KEY")
     if not gemini_api_key:
-        print("❌ Error: GEMINI_API_KEY environment variable is required")
-        print("\nAdd to your .env file:")
-        print("GEMINI_API_KEY=your_gemini_api_key_here")
-        print("\nGet your API key from: https://aistudio.google.com/apikey")
+        logger.error("GEMINI_API_KEY environment variable is required")
+        logger.info("")
+        logger.info("Add to your .env file:")
+        logger.info("GEMINI_API_KEY=your_gemini_api_key_here")
+        logger.info("")
+        logger.info("Get your API key from: https://aistudio.google.com/apikey")
         sys.exit(1)
 
     if not config.product_name:
-        print("❌ Error: PRODUCT_NAME environment variable is required")
+        logger.error("PRODUCT_NAME environment variable is required")
         sys.exit(1)
 
-    print(f"Product: {config.product_name}")
-    print()
+    logger.info(f"Product: {config.product_name}")
 
     # Check if YAML exists
     yaml_path = config.get_output_file_path()
     if not yaml_path.exists():
-        print(f"❌ Error: YAML description not found at {yaml_path}")
-        print("\nRun the analysis first:")
-        print(f"  poetry run python -m product_describer.main")
+        logger.error(f"YAML description not found at {yaml_path}")
+        logger.info("")
+        logger.info("Run the analysis first:")
+        logger.info("  poetry run python -m product_describer.main")
         sys.exit(1)
 
     # Load YAML specifications
-    print(f"Loading specifications from: {yaml_path}")
+    logger.info(f"Loading specifications from: {yaml_path}")
     yaml_specs = load_yaml_specs(yaml_path)
-    print(f"✓ Loaded {len(yaml_specs)} characters of technical specs")
-    print()
+    logger.info(f"Loaded {len(yaml_specs)} characters of technical specs")
 
     # Get reference image (use first image from data directory)
     data_dir = config.get_product_data_dir()
@@ -184,24 +191,24 @@ def main():
     image_files = handler.get_image_files()
 
     if not image_files:
-        print(f"❌ Error: No images found in {data_dir}")
+        logger.error(f"No images found in {data_dir}")
         sys.exit(1)
 
     reference_image = image_files[0]  # Use first image as reference
 
     # Load custom prompt from environment variable, file, or use default
-    custom_prompt_file = config.get_product_output_dir() / "generation_prompt.txt"
+    custom_prompt_file = config.get_product_output_dir() / GENERATION_PROMPT_FILENAME
     custom_prompt_env = os.getenv("GENERATION_PROMPT")
 
     if custom_prompt_env:
-        print("Using prompt from GENERATION_PROMPT environment variable")
+        logger.info("Using prompt from GENERATION_PROMPT environment variable")
         custom_prompt = custom_prompt_env
     elif custom_prompt_file.exists():
-        print(f"Using prompt from: {custom_prompt_file}")
+        logger.info(f"Using prompt from: {custom_prompt_file}")
         with open(custom_prompt_file, "r") as f:
             custom_prompt = f.read().strip()
     else:
-        print(
+        logger.info(
             "Using default prompt (create temp/<PRODUCT_NAME>/generation_prompt.txt to customize)"
         )
         custom_prompt = """Create a professional studio product photograph of this item.
@@ -209,12 +216,11 @@ The lighting should be clean and even, showing all details clearly.
 The background should be neutral white.
 Match the technical specifications exactly, especially colors, materials, and proportions."""
 
-    print()
-    print("Prompt:")
-    print("-" * 70)
-    print(custom_prompt)
-    print("-" * 70)
-    print()
+    logger.info("")
+    logger.info("Prompt:")
+    logger.info("-" * 70)
+    logger.info(custom_prompt)
+    logger.info("-" * 70)
 
     # Generate output filename with timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -237,7 +243,7 @@ Match the technical specifications exactly, especially colors, materials, and pr
             resolution=resolution,
         )
     except Exception as e:
-        print(f"\n❌ Error during generation: {e}")
+        logger.error(f"Error during generation: {e}")
         import traceback
 
         traceback.print_exc()

@@ -1,11 +1,23 @@
 """GPT-based product analysis."""
 
 import base64
+import time
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List
 
 from openai import OpenAI
 import yaml
+
+from product_describer.constants import (
+    DEFAULT_MAX_TOKENS,
+    DEFAULT_TEMPERATURE,
+    MAX_RETRY_ATTEMPTS,
+    RETRY_BACKOFF_FACTOR,
+)
+from product_describer.exceptions import APIError, YAMLParsingError
+from product_describer.logger import setup_logger
+
+logger = setup_logger(__name__)
 
 
 class GPTAnalyzer:
@@ -81,7 +93,7 @@ CRITICAL REQUIREMENTS - Include all applicable details:
 
 Provide your analysis in a structured YAML format. Be EXTREMELY specific with measurements, ratios, angles, and hex color codes. If you cannot measure something exactly, provide your best technical estimate with qualifiers. Every measurement matters for accurate reconstruction."""
 
-    def __init__(self, api_key: str, model: str = "gpt-5.2-2025-12-11"):
+    def __init__(self, api_key: str, model: str = "gpt-5.2-2025-12-11") -> None:
         """Initialize GPT analyzer.
 
         Args:
@@ -122,7 +134,9 @@ Provide your analysis in a structured YAML format. Be EXTREMELY specific with me
         }
         return mime_types.get(ext, "image/jpeg")
 
-    def analyze_product(self, image_paths: List[Path], product_name: str) -> dict:
+    def analyze_product(
+        self, image_paths: List[Path], product_name: str
+    ) -> Dict[str, Any]:
         """Analyze product images and return structured data.
 
         Args:
@@ -133,9 +147,10 @@ Provide your analysis in a structured YAML format. Be EXTREMELY specific with me
             Dictionary containing product analysis.
 
         Raises:
-            Exception: If GPT API call fails.
+            APIError: If GPT API call fails after retries.
+            YAMLParsingError: If response cannot be parsed as YAML.
         """
-        print(f"Analyzing {len(image_paths)} images for product: {product_name}")
+        logger.info(f"Analyzing {len(image_paths)} images for product: {product_name}")
 
         # Prepare messages with images
         content = [
@@ -200,62 +215,75 @@ FOCUS ON SUBTLETY:
                     },
                 }
             )
-            print(f"  - Added image {i}: {image_path.name}")
+            logger.debug(f"Added image {i}: {image_path.name}")
 
         messages = [
             {"role": "system", "content": self.SYSTEM_PROMPT},
             {"role": "user", "content": content},
         ]
 
-        # Call GPT API
-        print(f"\nCalling GPT model: {self.model}...")
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-            max_completion_tokens=16000,  # Increased for GPT-5.2 with reasoning (needs tokens for both reasoning + output)
-            temperature=0.3,  # Lower temperature for more precise, technical output
-        )
+        # Call GPT API with retry logic
+        logger.info(f"Calling GPT model: {self.model}...")
+
+        for attempt in range(1, MAX_RETRY_ATTEMPTS + 1):
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    max_completion_tokens=DEFAULT_MAX_TOKENS,
+                    temperature=DEFAULT_TEMPERATURE,
+                )
+                break  # Success, exit retry loop
+            except Exception as e:
+                if attempt == MAX_RETRY_ATTEMPTS:
+                    logger.error(f"API call failed after {MAX_RETRY_ATTEMPTS} attempts")
+                    raise APIError(f"GPT API call failed: {e}") from e
+
+                wait_time = RETRY_BACKOFF_FACTOR**attempt
+                logger.warning(
+                    f"API call attempt {attempt} failed: {e}. Retrying in {wait_time}s..."
+                )
+                time.sleep(wait_time)
 
         # Extract response
         response_text = response.choices[0].message.content
 
         if not response_text:
-            print("❌ ERROR: GPT returned empty response")
-            print(f"Response object: {response}")
-            raise Exception("GPT returned empty response")
+            logger.error("GPT returned empty response")
+            logger.debug(f"Response object: {response}")
+            raise APIError("GPT returned empty response")
 
-        print("✓ Received response from GPT")
-        print(f"Response length: {len(response_text)} characters\n")
+        logger.info("Received response from GPT")
+        logger.debug(f"Response length: {len(response_text)} characters")
 
         # Debug: Show first 500 chars of response
-        print("Response preview:")
-        print("-" * 60)
-        print(response_text[:500])
-        print("-" * 60)
-        print()
+        logger.debug("Response preview:")
+        logger.debug("-" * 60)
+        logger.debug(response_text[:500])
+        logger.debug("-" * 60)
 
         # Parse YAML from response
         # GPT might wrap YAML in code blocks, so we need to extract it
         yaml_text = self._extract_yaml_from_response(response_text)
 
         if not yaml_text or yaml_text.strip() == "":
-            print("❌ ERROR: Extracted YAML text is empty")
-            print(f"Original response:\n{response_text}")
-            raise Exception("Could not extract YAML from GPT response")
+            logger.error("Extracted YAML text is empty")
+            logger.debug(f"Original response:\n{response_text}")
+            raise YAMLParsingError("Could not extract YAML from GPT response")
 
         try:
             product_data = yaml.safe_load(yaml_text)
 
             if product_data is None:
-                print("❌ ERROR: YAML parsed to None")
-                print(f"YAML text:\n{yaml_text}")
-                raise Exception("YAML parsing resulted in None")
+                logger.error("YAML parsed to None")
+                logger.debug(f"YAML text:\n{yaml_text}")
+                raise YAMLParsingError("YAML parsing resulted in None")
 
             return product_data
         except yaml.YAMLError as e:
-            print(f"❌ ERROR: Could not parse response as YAML: {e}")
-            print(f"YAML text:\n{yaml_text}")
-            print("\nReturning raw response as text.")
+            logger.error(f"Could not parse response as YAML: {e}")
+            logger.debug(f"YAML text:\n{yaml_text}")
+            logger.warning("Returning raw response as text.")
             return {"raw_response": response_text}
 
     def _extract_yaml_from_response(self, response: str) -> str:
