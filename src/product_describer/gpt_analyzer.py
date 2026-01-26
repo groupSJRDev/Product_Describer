@@ -2,6 +2,7 @@
 
 import base64
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -16,6 +17,7 @@ from product_describer.constants import (
 )
 from product_describer.exceptions import APIError, YAMLParsingError
 from product_describer.logger import setup_logger
+from product_describer.template_manager import TemplateManager
 
 logger = setup_logger(__name__)
 
@@ -93,15 +95,29 @@ CRITICAL REQUIREMENTS - Include all applicable details:
 
 Provide your analysis in a structured YAML format. Be EXTREMELY specific with measurements, ratios, angles, and hex color codes. If you cannot measure something exactly, provide your best technical estimate with qualifiers. Every measurement matters for accurate reconstruction."""
 
-    def __init__(self, api_key: str, model: str = "gpt-5.2-2025-12-11") -> None:
+    def __init__(
+        self,
+        api_key: str,
+        model: str = "gpt-5.2-2025-12-11",
+        use_template: bool = True,
+        template_version: str = "1.0",
+    ) -> None:
         """Initialize GPT analyzer.
 
         Args:
             api_key: OpenAI API key.
             model: GPT model to use for analysis.
+            use_template: Whether to use template-based analysis (default: True).
+            template_version: Template version to use (default: "1.0").
         """
         self.client = OpenAI(api_key=api_key)
         self.model = model
+        self.use_template = use_template
+        self.template_version = template_version
+
+        if self.use_template:
+            self.template_manager = TemplateManager()
+            logger.info(f"Template-based analysis enabled (version {template_version})")
 
     def _encode_image(self, image_path: Path) -> str:
         """Encode image to base64.
@@ -152,54 +168,139 @@ Provide your analysis in a structured YAML format. Be EXTREMELY specific with me
         """
         logger.info(f"Analyzing {len(image_paths)} images for product: {product_name}")
 
-        # Prepare messages with images
-        content = [
-            {
-                "type": "text",
-                "text": f"""
+        if self.use_template:
+            return self._template_based_analysis(image_paths, product_name)
+        else:
+            return self._free_form_analysis(image_paths, product_name)
+
+    def _template_based_analysis(
+        self, image_paths: List[Path], product_name: str
+    ) -> Dict[str, Any]:
+        """Perform template-based analysis.
+
+        Args:
+            image_paths: List of paths to product images.
+            product_name: Name of the product being analyzed.
+
+        Returns:
+            Dictionary containing product analysis.
+        """
+        logger.info("Using template-based analysis approach")
+
+        # Load template
+        template_yaml = self.template_manager.load_template(self.template_version)
+
+        # Build prompt with template
+        prompt_content = self._build_template_prompt(
+            template_yaml, product_name, len(image_paths)
+        )
+
+        # Prepare content with images
+        content = self._prepare_content_with_images(image_paths, prompt_content)
+
+        # Call API and get response
+        response_text = self._call_gpt_api(content)
+
+        # Parse YAML
+        yaml_text = self._extract_yaml_from_response(response_text)
+        product_data = self._parse_yaml(yaml_text, response_text)
+
+        # Validate against template
+        is_valid, errors = self.template_manager.validate_response(
+            product_data, self.template_version
+        )
+
+        if not is_valid:
+            logger.warning(f"Template validation found {len(errors)} issues:")
+            for error in errors[:5]:  # Show first 5 errors
+                logger.warning(f"  - {error}")
+            if len(errors) > 5:
+                logger.warning(f"  ... and {len(errors) - 5} more")
+
+        return product_data
+
+    def _free_form_analysis(
+        self, image_paths: List[Path], product_name: str
+    ) -> Dict[str, Any]:
+        """Perform free-form analysis (original approach).
+
+        Args:
+            image_paths: List of paths to product images.
+            product_name: Name of the product being analyzed.
+
+        Returns:
+            Dictionary containing product analysis.
+        """
+        logger.info("Using free-form analysis approach")
+
+        # Prepare content with images
+        prompt_text = f"""
 Analyze these images of the product '{product_name}' and produce a TECHNICAL RECONSTRUCTION SPEC in YAML.
 
-CRITICAL RULES (NO HALLUCINATED PRECISION):
-1) Separate OBSERVED vs INFERRED values. Do not present inferred values as exact.
-2) Only output absolute mm/in dimensions if scale is clearly anchored (dimension callout, ruler, known SKU size, printed measurement). Otherwise output ratios/percentages + a 'scale_required' note.
-3) For EVERY numeric dimension/angle/radius, include:
-   - measurement_basis (which image/view)
-   - how_measured (anchor points / pixel ratio / fitted arc)
-   - uncertainty (± mm or ± %)
-   - confidence (high/medium/low)
-4) Estimate camera pose + perspective risk per image; prefer orthographic-ish views; note when perspective could mimic geometry.
+{self.SYSTEM_PROMPT}
+"""
+        content = self._prepare_content_with_images(image_paths, prompt_text)
 
-OUTPUT MUST INCLUDE:
-A) Reconstruction plan:
-   - primitive_decomposition (how to model it)
-   - key constraints (what must match)
-B) Geometry:
-   - overall width/height ratio and (if scaled) absolute width/height
-   - corner radii (top vs bottom) with arc-fit notes
-   - subtle edge bows/camber/angles (e.g., top edge not perfectly straight)
-   - thickness map (panel/rim/closure) with confidence
-   - silhouette_keypoints_normalized (0..1) around outline (>= 16 points)
-   - feature keypoints (logo bbox, closure endpoints, seam path)
-C) Materials (PBR-ready):
-   - base_color HEX + variation
-   - transmission/IOR/roughness/specular/subsurface
-   - transparency/haze estimates with uncertainty
-D) Graphics/labels:
-   - placement offsets as ratios and (if scaled) mm
-E) Deformation behaviors (if flexible/soft):
-   - how shape changes when filled/gripped
-F) Consistency checks:
-   - cross-image ratio comparisons
-   - conflicts found and resolution choice
-G) Uncertainties:
-   - list the top unknowns and what extra photo would reduce them.
+        # Call API and get response
+        response_text = self._call_gpt_api(content)
 
-FOCUS ON SUBTLETY:
-- Capture slight angle shifts, micro-bows, non-perfect symmetry, and soft-material relaxation.
-- Do not default to perfectly straight lines unless the images strongly support it.
-""",
-            }
-        ]
+        # Parse YAML
+        yaml_text = self._extract_yaml_from_response(response_text)
+        return self._parse_yaml(yaml_text, response_text)
+
+    def _build_template_prompt(
+        self, template_yaml: str, product_name: str, image_count: int
+    ) -> str:
+        """Build prompt for template-based analysis.
+
+        Args:
+            template_yaml: Template YAML string
+            product_name: Product name
+            image_count: Number of images
+
+        Returns:
+            Formatted prompt string
+        """
+        return f"""
+You are a technical product analyst. Analyze the provided product images and fill in the YAML template with accurate measurements and observations.
+
+PRODUCT: {product_name}
+IMAGES PROVIDED: {image_count}
+
+CRITICAL INSTRUCTIONS:
+1. Preserve the EXACT template structure - do not add or remove fields
+2. Fill in all fields you can determine from the images
+3. Use null for fields you cannot determine with confidence
+4. Provide confidence scores (0.0-1.0) for uncertain measurements
+5. Include measurement_basis explanations for key dimensions
+6. Use ISO 8601 format for dates (YYYY-MM-DD)
+7. Return ONLY the completed YAML - no explanations or commentary
+
+MEASUREMENT GUIDELINES:
+- For dimensions: measure in mm unless otherwise specified
+- For colors: provide hex codes (e.g., #D9E7EF)
+- For confidence: 0.0 = pure guess, 0.5 = somewhat confident, 1.0 = certain
+- For ratios: use decimal format (e.g., 1.5 not "3:2")
+
+TEMPLATE TO FILL:
+{template_yaml}
+
+Analyze the images carefully and return the completed YAML template.
+"""
+
+    def _prepare_content_with_images(
+        self, image_paths: List[Path], prompt_text: str
+    ) -> List[Dict[str, Any]]:
+        """Prepare content list with prompt and images.
+
+        Args:
+            image_paths: List of image paths
+            prompt_text: Prompt text
+
+        Returns:
+            Content list for API call
+        """
+        content = [{"type": "text", "text": prompt_text}]
 
         # Add all images
         for i, image_path in enumerate(image_paths, 1):
@@ -217,6 +318,20 @@ FOCUS ON SUBTLETY:
             )
             logger.debug(f"Added image {i}: {image_path.name}")
 
+        return content
+
+    def _call_gpt_api(self, content: List[Dict[str, Any]]) -> str:
+        """Call GPT API with retry logic.
+
+        Args:
+            content: Content to send to API
+
+        Returns:
+            Response text from API
+
+        Raises:
+            APIError: If API call fails after retries
+        """
         messages = [
             {"role": "system", "content": self.SYSTEM_PROMPT},
             {"role": "user", "content": content},
@@ -227,17 +342,29 @@ FOCUS ON SUBTLETY:
 
         for attempt in range(1, MAX_RETRY_ATTEMPTS + 1):
             try:
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=messages,
-                    max_completion_tokens=DEFAULT_MAX_TOKENS,
-                    temperature=DEFAULT_TEMPERATURE,
-                )
-                break  # Success, exit retry loop
+                # Use max_completion_tokens for newer models (GPT-5.2+)
+                if "gpt-5" in self.model or "gpt-6" in self.model:
+                    response = self.client.chat.completions.create(
+                        model=self.model,
+                        messages=messages,
+                        max_completion_tokens=DEFAULT_MAX_TOKENS,
+                        temperature=DEFAULT_TEMPERATURE,
+                    )
+                else:
+                    response = self.client.chat.completions.create(
+                        model=self.model,
+                        messages=messages,
+                        max_tokens=DEFAULT_MAX_TOKENS,
+                        temperature=DEFAULT_TEMPERATURE,
+                    )
+                break
             except Exception as e:
+                logger.error(f"API call failed on attempt {attempt}: {e}")
+
                 if attempt == MAX_RETRY_ATTEMPTS:
-                    logger.error(f"API call failed after {MAX_RETRY_ATTEMPTS} attempts")
-                    raise APIError(f"GPT API call failed: {e}") from e
+                    raise APIError(
+                        f"GPT API call failed after {MAX_RETRY_ATTEMPTS} attempts: {e}"
+                    )
 
                 wait_time = RETRY_BACKOFF_FACTOR**attempt
                 logger.warning(
@@ -245,7 +372,7 @@ FOCUS ON SUBTLETY:
                 )
                 time.sleep(wait_time)
 
-        # Extract response
+        # Extract and validate response
         response_text = response.choices[0].message.content
 
         if not response_text:
@@ -255,20 +382,29 @@ FOCUS ON SUBTLETY:
 
         logger.info("Received response from GPT")
         logger.debug(f"Response length: {len(response_text)} characters")
-
-        # Debug: Show first 500 chars of response
         logger.debug("Response preview:")
         logger.debug("-" * 60)
         logger.debug(response_text[:500])
         logger.debug("-" * 60)
 
-        # Parse YAML from response
-        # GPT might wrap YAML in code blocks, so we need to extract it
-        yaml_text = self._extract_yaml_from_response(response_text)
+        return response_text
 
+    def _parse_yaml(self, yaml_text: str, original_response: str) -> Dict[str, Any]:
+        """Parse YAML text into dictionary.
+
+        Args:
+            yaml_text: YAML text to parse
+            original_response: Original response for fallback
+
+        Returns:
+            Parsed YAML as dictionary
+
+        Raises:
+            YAMLParsingError: If YAML cannot be parsed
+        """
         if not yaml_text or yaml_text.strip() == "":
             logger.error("Extracted YAML text is empty")
-            logger.debug(f"Original response:\n{response_text}")
+            logger.debug(f"Original response:\n{original_response}")
             raise YAMLParsingError("Could not extract YAML from GPT response")
 
         try:
@@ -279,12 +415,19 @@ FOCUS ON SUBTLETY:
                 logger.debug(f"YAML text:\n{yaml_text}")
                 raise YAMLParsingError("YAML parsing resulted in None")
 
+            # Add analysis timestamp if template-based and metadata exists
+            if self.use_template and "metadata" in product_data:
+                if product_data["metadata"].get("analysis_date") is None:
+                    product_data["metadata"]["analysis_date"] = datetime.now().strftime(
+                        "%Y-%m-%d"
+                    )
+
             return product_data
         except yaml.YAMLError as e:
             logger.error(f"Could not parse response as YAML: {e}")
             logger.debug(f"YAML text:\n{yaml_text}")
             logger.warning("Returning raw response as text.")
-            return {"raw_response": response_text}
+            return {"raw_response": original_response}
 
     def _extract_yaml_from_response(self, response: str) -> str:
         """Extract YAML content from GPT response.

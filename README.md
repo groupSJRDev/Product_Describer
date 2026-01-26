@@ -7,9 +7,11 @@ A modular Python application that analyzes product images using GPT vision capab
 - 📸 **Multi-Image Analysis**: Process multiple product images simultaneously
 - 🤖 **GPT Vision Integration**: Uses GPT-5.2 for intelligent product analysis
 - 📋 **Structured Output**: Generates detailed YAML with product facets
+- � **Template-Based Analysis**: Optional structured templates for consistent, validated output
 - 🔧 **Modular Design**: Clean, maintainable, and extensible architecture
 - ⚙️ **Configurable**: Environment-based configuration for different products
 - 🔄 **Repeatable**: Consistent analysis with reproducible results
+- ✅ **Validation**: Automatic schema validation with confidence scoring
 
 ## Quick Start
 
@@ -164,6 +166,53 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 - **[Architecture](docs/ARCHITECTURE.md)**: System design and component documentation
 - **[Execution Plan](docs/EXECUTION_PLAN.md)**: Detailed usage and troubleshooting
 - **[Developer Guide](docs/DEVELOPER.md)**: Development workflow and API reference
+- **[YAML Template Proposal](docs/YAML_TEMPLATE_PROPOSAL.md)**: Template-based analysis system design
+- **[Analysis Prompt Improvements](docs/ANALYSIS_PROMPT_IMPROVEMENTS.md)**: GPT Vision prompt optimization
+- **[Generation Prompt Improvements](docs/GENERATION_PROMPT_IMPROVEMENTS.md)**: Image generation prompt guidelines
+
+## Template-Based Analysis
+
+Product Describer now supports template-based analysis for more consistent and structured output:
+
+### Using Templates
+
+```python
+from product_describer.gpt_analyzer import GPTAnalyzer
+
+# Enable template-based analysis (default in v1.0+)
+analyzer = GPTAnalyzer(
+    api_key="your_key",
+    use_template=True,  # Default: True
+    template_version="1.0"
+)
+
+# Disable to use free-form analysis
+analyzer = GPTAnalyzer(api_key="your_key", use_template=False)
+```
+
+### Template Features
+
+- **Structured Fields**: Predefined sections for dimensions, geometry, colors, materials, labels
+- **Confidence Scoring**: 0.0-1.0 confidence scores for uncertain measurements
+- **Automatic Validation**: Schema validation with detailed error reporting
+- **Measurement Basis**: Track how each measurement was derived
+- **ISO Standards**: Date formats, unit consistency, hex color codes
+- **Uncertainty Tracking**: Identify fields needing validation
+
+### Available Templates
+
+Templates are stored in [`templates/`](templates/):
+
+- **product_analysis_v1.0.yaml**: Comprehensive product analysis template
+  - Dimensions with confidence scores
+  - Geometry (corners, edges, thickness, symmetry)
+  - Colors with hex codes and coverage
+  - Materials and optical properties
+  - Labels and graphics placement
+  - Deformation behaviors
+  - Analysis notes and uncertainty tracking
+
+See [`templates/README.md`](templates/README.md) for complete template documentation.
 
 ## Development
 
@@ -224,7 +273,10 @@ For more troubleshooting, see [Execution Plan - Error Handling](docs/EXECUTION_P
 |----------|----------|---------|-------------|
 | `PRODUCT_NAME` | Yes | - | Product identifier for directories |
 | `OPENAI_API_KEY` | Yes | - | OpenAI API key |
+| `GEMINI_API_KEY` | No | - | Gemini API key for image generation |
 | `GPT_MODEL` | No | `gpt-5.2-2025-12-11` | GPT model version |
+| `USE_TEMPLATE` | No | `true` | Enable template-based analysis |
+| `TEMPLATE_VERSION` | No | `1.0` | Template version to use |
 
 ## Examples
 

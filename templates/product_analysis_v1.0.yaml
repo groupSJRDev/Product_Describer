@@ -1,0 +1,180 @@
+# Product Analysis Template v1.0
+# Instructions: Fill in all fields with measurements/observations from product images
+# Use null for fields that cannot be determined
+# Use confidence scores (0.0-1.0) for uncertain measurements
+
+metadata:
+  template_version: "1.0"
+  product_name: null
+  analysis_date: null
+  image_count: null
+  confidence_overall: null
+
+dimensions:
+  primary:
+    width:
+      value: null
+      unit: "mm"
+      confidence: null
+      measurement_basis: null
+    height:
+      value: null
+      unit: "mm"
+      confidence: null
+      measurement_basis: null
+    depth:
+      value: null
+      unit: "mm"
+      confidence: null
+      measurement_basis: null
+  aspect_ratios:
+    width_to_height: null
+    depth_to_width: null
+  scale_required: null
+
+geometry:
+  corner_radii:
+    top_left:
+      radius: null
+      confidence: null
+    top_right:
+      radius: null
+      confidence: null
+    bottom_left:
+      radius: null
+      confidence: null
+    bottom_right:
+      radius: null
+      confidence: null
+  edges:
+    top:
+      shape: null
+      curvature_details: null
+      deviation: null
+    bottom:
+      shape: null
+      curvature_details: null
+      deviation: null
+    left:
+      shape: null
+      curvature_details: null
+      deviation: null
+    right:
+      shape: null
+      curvature_details: null
+      deviation: null
+  thickness:
+    rim:
+      min: null
+      max: null
+      average: null
+    body:
+      min: null
+      max: null
+      average: null
+  symmetry:
+    horizontal: null
+    vertical: null
+    asymmetry_notes: null
+
+colors:
+  primary:
+    hex: null
+    rgb: null
+    name: null
+    coverage_percentage: null
+    confidence: null
+  secondary:
+    hex: null
+    rgb: null
+    name: null
+    coverage_percentage: null
+    confidence: null
+  accent:
+    hex: null
+    rgb: null
+    name: null
+    coverage_percentage: null
+    confidence: null
+  label_colors:
+    background: null
+    text: null
+    graphics: []
+
+materials:
+  primary_material:
+    type: null
+    finish: null
+    rigidity: null
+    confidence: null
+  optical_properties:
+    transparency:
+      type: null
+      percentage: null
+      confidence: null
+    refraction:
+      present: null
+      index_estimate: null
+      description: null
+    reflection:
+      type: null
+      intensity: null
+      description: null
+  surface_texture:
+    type: null
+    description: null
+    visible_at_scale: null
+
+labels:
+  present: null
+  primary_label:
+    material: null
+    position: null
+    dimensions:
+      width_mm: null
+      height_mm: null
+      width_percentage: null
+      height_percentage: null
+    placement:
+      offset_from_top_mm: null
+      offset_from_left_mm: null
+      centered_horizontal: null
+      centered_vertical: null
+    content:
+      text_present: null
+      text_content: null
+      graphics_present: null
+      graphics_description: null
+      logo_present: null
+      logo_description: null
+    style:
+      finish: null
+      colors_used: []
+
+deformation:
+  applies: null
+  when_filled:
+    shape_change: null
+    expansion_areas: []
+    constraints: []
+  when_empty:
+    resting_shape: null
+    folds_or_creases: null
+    fold_locations: []
+
+keypoints:
+  silhouette:
+    points: []
+    point_count: null
+  features: []
+
+analysis_notes:
+  measurement_challenges: []
+  assumptions_made: []
+  cross_image_conflicts: []
+  recommended_additional_images: []
+
+uncertainty:
+  highest_confidence_fields: []
+  lowest_confidence_fields: []
+  fields_requiring_validation: []
