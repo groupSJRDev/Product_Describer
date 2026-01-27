@@ -305,3 +305,34 @@ Contributions welcome! Please read our [Developer Guide](docs/DEVELOPER.md#contr
 - 📖 Documentation: [`docs/`](docs/)
 - 🐛 Issues: Open an issue on GitHub
 - 💬 Questions: Check the [Execution Plan](docs/EXECUTION_PLAN.md)
+
+## Deployment
+
+### Docker Deployment
+
+The application is containerized and can be deployed using Docker Compose.
+
+```bash
+# Build and start services (Backend + Database)
+docker-compose up -d --build
+```
+
+The API will be available at `http://localhost:8000`.
+
+### API Documentation
+
+The backend provides interactive API documentation via Swagger UI.
+
+- **Swagger UI**: [http://localhost:8000/api/docs](http://localhost:8000/api/docs)
+- **ReDoc**: [http://localhost:8000/api/redoc](http://localhost:8000/api/redoc)
+
+#### Key Endpoints
+
+- **Auth**: `POST /api/auth/login` (Get JWT token)
+- **Products**: 
+  - `POST /api/products` (Create product)
+  - `GET /api/products` (List products)
+  - `POST /api/products/{id}/upload-references` (Upload images)
+- **Analysis**: `POST /api/products/{id}/analyze` (Trigger GPT analysis)
+- **Generation**: `POST /api/products/{id}/generate` (Trigger image generation)
+

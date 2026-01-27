@@ -597,11 +597,11 @@ GEMINI_API_KEY=...
 - [x] 9.6: Write integration tests for API endpoints (test_e2e.py covers full flow)
 
 ### Phase 10: Deployment Preparation
-- [ ] 10.1: Create Dockerfile for backend
-- [ ] 10.2: Create docker-compose.yml (app + postgres)
-- [ ] 10.3: Add production environment config
-- [ ] 10.4: Create startup script with migrations
-- [ ] 10.5: Document API endpoints in README
+- [x] 10.1: Create Dockerfile for backend
+- [x] 10.2: Create docker-compose.yml (app + postgres)
+- [x] 10.3: Add production environment config (In docker-compose env vars)
+- [x] 10.4: Create startup script with migrations (entrypoint.sh)
+- [x] 10.5: Document API endpoints in README
 
 ---
 
@@ -643,3 +643,4 @@ GEMINI_API_KEY=...
 - [x] Frontend can consume all API endpoints
 - [x] All tests pass (End-to-End verified)
 - [x] API documentation complete (OpenAPI)
+- [x] Docker deployment ready
