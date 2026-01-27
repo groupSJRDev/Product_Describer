@@ -42,18 +42,18 @@ class AnalysisService:
         
         # Get full paths to reference images
         image_paths = [
-            str(storage_service.get_file_path(img.storage_path))
+            storage_service.get_file_path(img.storage_path)
             for img in reference_images
         ]
         
         # Run GPT analysis
-        yaml_content = self.analyzer.analyze_product_images(
+        parsed_yaml = self.analyzer.analyze_product(
             image_paths,
-            use_template=use_template
+            product_name=product.name
         )
         
-        # Parse YAML to extract metadata
-        parsed_yaml = yaml.safe_load(yaml_content)
+        # Convert to string for storage
+        yaml_content = yaml.dump(parsed_yaml, sort_keys=False)
         
         # Extract key information
         confidence = parsed_yaml.get("metadata", {}).get("confidence_overall")
@@ -101,7 +101,7 @@ class AnalysisService:
             template_version="1.0" if use_template else None,
             confidence_overall=confidence,
             image_count=len(reference_images),
-            analysis_model=self.analyzer.model_name,
+            analysis_model=self.analyzer.model,
             is_active=True,
             primary_dimensions=primary_dimensions,
             primary_colors=primary_colors,

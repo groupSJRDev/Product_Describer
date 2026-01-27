@@ -72,10 +72,10 @@ def analyze_product(token, product_id):
     if response.status_code == 200:
         result = response.json()
         print(f"✅ Analysis complete")
-        print(f"   - Specification ID: {result['specification_id']}")
+        print(f"   - Specification ID: {result['id']}")
         print(f"   - Version: {result['version']}")
-        print(f"   - Dimensions: {result['dimensions']}")
-        print(f"   - Colors: {result['colors']}")
+        print(f"   - Dimensions: {result['primary_dimensions']}")
+        print(f"   - Colors: {result['primary_colors']}")
         return result
     else:
         print(f"❌ Analysis failed: {response.status_code}")
@@ -88,8 +88,8 @@ def generate_images(token, product_id):
     headers = {"Authorization": f"Bearer {token}"}
     
     payload = {
-        "custom_prompt": "professional product photography, clean background, studio lighting",
-        "count": 2,
+        "prompt": "professional product photography, clean background, studio lighting",
+        "image_count": 2,
         "aspect_ratio": "1:1",
         "resolution": "1024x1024"
     }
@@ -111,7 +111,7 @@ def generate_images(token, product_id):
         print(response.text)
         return None
 
-def check_generation_status(token, request_id, max_wait=60):
+def check_generation_status(token, request_id, max_wait=200):
     """Poll generation status."""
     print(f"\n5. Waiting for generation to complete...")
     headers = {"Authorization": f"Bearer {token}"}
@@ -130,7 +130,7 @@ def check_generation_status(token, request_id, max_wait=60):
             
             if status == 'completed':
                 print(f"✅ Generation completed!")
-                print(f"   - Generated {result['images_generated']} images")
+                print(f"   - Generated {result['image_count']} images")
                 return result
             elif status == 'failed':
                 print(f"❌ Generation failed: {result.get('error_message')}")
@@ -152,12 +152,14 @@ def main():
     
     # Step 2: Upload reference images
     project_root = Path(__file__).parent
-    image_paths = [
-        project_root / "data/stasher_half_gallon/Screenshot 2026-01-23 at 11.02.34 AM.png",
-        project_root / "data/stasher_half_gallon/Screenshot 2026-01-23 at 11.03.14 AM.png",
-        project_root / "data/stasher_half_gallon/Screenshot 2026-01-23 at 11.03.24 AM.png",
-    ]
+    img_dir = project_root / "data/stasher_half_gallon"
+    # Use glob to find up to 3 png files to be robust against filename spaces/chars
+    image_paths = list(img_dir.glob("*.png"))[:3]
     
+    if not image_paths:
+        print(f"❌ No PNG images found in {img_dir}")
+        return
+
     uploaded_images = upload_images(token, 1, image_paths)
     if not uploaded_images:
         return

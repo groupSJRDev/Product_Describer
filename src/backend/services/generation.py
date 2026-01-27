@@ -21,6 +21,8 @@ from backend.config import GEMINI_API_KEY
 from product_describer.generate_test import generate_image_from_specs
 
 
+from backend.database import SessionLocal
+
 class GenerationService:
     """Service for generating images using Gemini."""
     
@@ -125,20 +127,21 @@ class GenerationService:
     
     def process_generation(
         self,
-        request: GenerationRequest,
-        db: Session
-    ) -> List[GeneratedImage]:
+        request_id: int
+    ) -> None:
         """
         Process a generation request and create images.
         
         Args:
-            request: The generation request to process
-            db: Database session
-        
-        Returns:
-            List[GeneratedImage]: The generated images
+            request_id: The ID of the generation request to process
         """
+        db = SessionLocal()
         try:
+            request = db.query(GenerationRequest).filter(GenerationRequest.id == request_id).first()
+            if not request:
+                print(f"Generation request {request_id} not found")
+                return
+
             # Update status to processing
             request.status = "processing"
             request.started_at = datetime.now()
@@ -224,18 +227,18 @@ class GenerationService:
             request.completed_at = datetime.now()
             db.commit()
             
-            for img in generated_images:
-                db.refresh(img)
-            
-            return generated_images
-            
         except Exception as e:
             # Update request with error
-            request.status = "failed"
-            request.error_message = str(e)
-            request.completed_at = datetime.now()
-            db.commit()
-            raise
+            if request:
+                request.status = "failed"
+                request.error_message = str(e)
+                request.completed_at = datetime.now()
+                db.commit()
+            print(f"Generation failed: {e}")
+            # Do not re-raise, as this is a background task
+        
+        finally:
+            db.close()
     
     def get_generation_status(
         self,

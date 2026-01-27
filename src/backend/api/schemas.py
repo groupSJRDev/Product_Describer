@@ -101,7 +101,7 @@ class SpecificationResponse(BaseModel):
     created_at: datetime
     change_notes: Optional[str]
     primary_dimensions: Optional[dict]
-    primary_colors: Optional[dict]
+    primary_colors: Optional[List[dict]]
     material_type: Optional[str]
 
     class Config:

@@ -48,11 +48,10 @@ def create_generation(
         db=db
     )
     
-    # Process generation in background
+    # Process generation in background (pass ID only, not session)
     background_tasks.add_task(
         generation_service.process_generation,
-        request,
-        db
+        request.id
     )
     
     return request
