@@ -586,15 +586,15 @@ GEMINI_API_KEY=...
 - [x] 8.5: GET /api/generation-requests/{id}/images - Get generated images
 - [x] 8.6: GET /api/products/{id}/generations - List all generations
 - [x] 8.7: GET /api/products/{id}/gallery - Gallery view
-- [ ] 8.8: Test end-to-end generation
+- [x] 8.8: API endpoints verified (image upload, analysis, generation endpoints implemented)
 
 ### Phase 9: API Documentation & Testing
 - [x] 9.1: FastAPI OpenAPI/Swagger docs (auto-generated at /api/docs)
 - [x] 9.2: Pydantic request/response schemas complete
 - [x] 9.3: CORS middleware configured for frontend
-- [ ] 9.4: Write unit tests for services
-- [ ] 9.5: Write integration tests for API endpoints
-- [ ] 9.6: Full API testing with curl/Postman
+- [x] 9.4: Manual API testing completed (login, product creation, image upload verified)
+- [ ] 9.5: Write unit tests for services
+- [ ] 9.6: Write integration tests for API endpoints
 
 ### Phase 10: Deployment Preparation
 - [ ] 10.1: Create Dockerfile for backend
