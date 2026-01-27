@@ -517,16 +517,117 @@ GEMINI_API_KEY=...
 
 ---
 
-## Next Steps
+## Implementation Checklist
 
-1. ✅ **This Document**: Database schema planning
-2. ⏳ **Frontend Planning**: UI/UX design document
-3. ⏳ **Implementation**: 
-   - Set up FastAPI project structure
-   - Create database models
-   - Implement authentication
-   - Build API endpoints
-   - Integrate existing analyzer/generator code
+### Phase 1: Foundation Setup
+- [x] 1.1: Install FastAPI dependencies (fastapi, uvicorn, sqlalchemy, psycopg2, alembic)
+- [x] 1.2: Install auth dependencies (python-jose, passlib, python-multipart)
+- [x] 1.3: Create backend directory structure
+- [x] 1.4: Set up environment configuration (.env, settings.py)
+- [x] 1.5: Initialize PostgreSQL database (Docker on port 5433)
+
+### Phase 2: Database Models & Migrations
+- [x] 2.1: Create SQLAlchemy Base and database connection
+- [x] 2.2: Implement User model
+- [x] 2.3: Implement Product model
+- [x] 2.4: Implement ProductReferenceImage model
+- [x] 2.5: Implement ProductSpecification model with versioning
+- [x] 2.6: Implement GenerationRequest model
+- [x] 2.7: Implement GeneratedImage model
+- [x] 2.8: Initialize Alembic and create initial migration
+- [x] 2.9: Run migrations and verify database schema
+- [x] 2.10: Seed admin user (admin/admin123)
+
+### Phase 3: Authentication System
+- [x] 3.1: Create auth utilities (password hashing, JWT tokens)
+- [x] 3.2: Implement login endpoint (POST /api/auth/login)
+- [x] 3.3: Implement get current user endpoint (GET /api/auth/me)
+- [x] 3.4: Create authentication dependency for protected routes
+- [x] 3.5: Test authentication flow
+
+### Phase 4: Storage Service
+- [ ] 4.1: Create storage service interface
+- [ ] 4.2: Implement local file storage
+- [ ] 4.3: Create upload/download utilities
+- [ ] 4.4: Set up directory structure (refs/, specs/, generated/)
+- [ ] 4.5: Add image validation and processing
+
+### Phase 5: Product API Endpoints
+- [x] 5.1: POST /api/products - Create product
+- [x] 5.2: GET /api/products - List all products
+- [x] 5.3: GET /api/products/{id} - Get product details
+- [x] 5.4: PUT /api/products/{id} - Update product
+- [x] 5.5: DELETE /api/products/{id} - Delete product
+- [ ] 5.6: POST /api/products/{id}/upload-references - Upload reference images
+- [ ] 5.7: GET /api/products/{id}/references - List references
+- [ ] 5.8: DELETE /api/products/{id}/references/{ref_id} - Delete reference
+
+### Phase 6: Analysis Integration
+- [ ] 6.1: Create AnalysisService wrapping gpt_analyzer.py
+- [ ] 6.2: POST /api/products/{id}/analyze - Trigger analysis
+- [ ] 6.3: Save YAML to product_specifications table
+- [ ] 6.4: Extract and store JSONB metadata (dimensions, colors)
+- [ ] 6.5: Return analysis results with confidence scores
+- [ ] 6.6: Test with stasher_half_gallon images
+
+### Phase 7: Specification Management
+- [ ] 7.1: GET /api/products/{id}/specifications - List all versions
+- [ ] 7.2: GET /api/products/{id}/specifications/active - Get active spec
+- [ ] 7.3: GET /api/products/{id}/specifications/{version} - Get specific version
+- [ ] 7.4: PUT /api/products/{id}/specifications/{id} - Update spec (create new version)
+- [ ] 7.5: POST /api/products/{id}/specifications/{id}/activate - Set active version
+- [ ] 7.6: Test version control workflow
+
+### Phase 8: Generation Integration
+- [ ] 8.1: Create GenerationService wrapping generate_test.py
+- [ ] 8.2: POST /api/products/{id}/generate - Create generation request
+- [ ] 8.3: Implement background job processing (or async task)
+- [ ] 8.4: GET /api/generation-requests/{id} - Check generation status
+- [ ] 8.5: GET /api/generation-requests/{id}/images - Get generated images
+- [ ] 8.6: GET /api/products/{id}/generations - List all generations
+- [ ] 8.7: GET /api/products/{id}/gallery - Gallery view
+- [ ] 8.8: Test end-to-end generation
+
+### Phase 9: API Documentation & Testing
+- [ ] 9.1: Configure FastAPI OpenAPI/Swagger docs
+- [ ] 9.2: Add request/response schemas (Pydantic models)
+- [ ] 9.3: Add CORS middleware for frontend
+- [ ] 9.4: Write unit tests for services
+- [ ] 9.5: Write integration tests for API endpoints
+- [ ] 9.6: Test with Postman/curl
+
+### Phase 10: Deployment Preparation
+- [ ] 10.1: Create Dockerfile for backend
+- [ ] 10.2: Create docker-compose.yml (app + postgres)
+- [ ] 10.3: Add production environment config
+- [ ] 10.4: Create startup script with migrations
+- [ ] 10.5: Document API endpoints in README
+
+---
+
+## Implementation Order (Current Session)
+
+**Priority 1**: Foundation & Database
+1. Install dependencies
+2. Create project structure
+3. Set up database models
+4. Run migrations
+5. Seed admin user
+
+**Priority 2**: Authentication
+1. Implement auth utilities
+2. Create login endpoint
+3. Test authentication
+
+**Priority 3**: Core Product APIs
+1. Build product CRUD endpoints
+2. Add image upload functionality
+3. Test with sample data
+
+**Priority 4**: Analysis & Generation
+1. Integrate existing gpt_analyzer
+2. Integrate existing generate_test
+3. Test full workflow
 
 ---
 
@@ -540,3 +641,5 @@ GEMINI_API_KEY=...
 - [ ] Generated images stored and retrievable
 - [ ] Authentication works (JWT tokens)
 - [ ] Frontend can consume all API endpoints
+- [ ] All tests pass
+- [ ] API documentation complete
