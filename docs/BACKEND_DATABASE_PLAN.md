@@ -579,22 +579,22 @@ GEMINI_API_KEY=...
 - [x] 7.6: Version control workflow implemented
 
 ### Phase 8: Generation Integration
-- [ ] 8.1: Create GenerationService wrapping generate_test.py
-- [ ] 8.2: POST /api/products/{id}/generate - Create generation request
-- [ ] 8.3: Implement background job processing (or async task)
-- [ ] 8.4: GET /api/generation-requests/{id} - Check generation status
-- [ ] 8.5: GET /api/generation-requests/{id}/images - Get generated images
-- [ ] 8.6: GET /api/products/{id}/generations - List all generations
-- [ ] 8.7: GET /api/products/{id}/gallery - Gallery view
+- [x] 8.1: Create GenerationService wrapping generate_test.py
+- [x] 8.2: POST /api/products/{id}/generate - Create generation request
+- [x] 8.3: Implement background job processing with FastAPI BackgroundTasks
+- [x] 8.4: GET /api/generation-requests/{id} - Check generation status
+- [x] 8.5: GET /api/generation-requests/{id}/images - Get generated images
+- [x] 8.6: GET /api/products/{id}/generations - List all generations
+- [x] 8.7: GET /api/products/{id}/gallery - Gallery view
 - [ ] 8.8: Test end-to-end generation
 
 ### Phase 9: API Documentation & Testing
-- [ ] 9.1: Configure FastAPI OpenAPI/Swagger docs
-- [ ] 9.2: Add request/response schemas (Pydantic models)
-- [ ] 9.3: Add CORS middleware for frontend
+- [x] 9.1: FastAPI OpenAPI/Swagger docs (auto-generated at /api/docs)
+- [x] 9.2: Pydantic request/response schemas complete
+- [x] 9.3: CORS middleware configured for frontend
 - [ ] 9.4: Write unit tests for services
 - [ ] 9.5: Write integration tests for API endpoints
-- [ ] 9.6: Test with Postman/curl
+- [ ] 9.6: Full API testing with curl/Postman
 
 ### Phase 10: Deployment Preparation
 - [ ] 10.1: Create Dockerfile for backend
