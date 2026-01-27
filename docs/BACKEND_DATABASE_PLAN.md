@@ -546,11 +546,11 @@ GEMINI_API_KEY=...
 - [x] 3.5: Test authentication flow
 
 ### Phase 4: Storage Service
-- [ ] 4.1: Create storage service interface
-- [ ] 4.2: Implement local file storage
-- [ ] 4.3: Create upload/download utilities
-- [ ] 4.4: Set up directory structure (refs/, specs/, generated/)
-- [ ] 4.5: Add image validation and processing
+- [x] 4.1: Create storage service interface
+- [x] 4.2: Implement local file storage
+- [x] 4.3: Create upload/download utilities
+- [x] 4.4: Set up directory structure (refs/, specs/, generated/)
+- [x] 4.5: Add image validation and processing
 
 ### Phase 5: Product API Endpoints
 - [x] 5.1: POST /api/products - Create product
@@ -558,25 +558,25 @@ GEMINI_API_KEY=...
 - [x] 5.3: GET /api/products/{id} - Get product details
 - [x] 5.4: PUT /api/products/{id} - Update product
 - [x] 5.5: DELETE /api/products/{id} - Delete product
-- [ ] 5.6: POST /api/products/{id}/upload-references - Upload reference images
-- [ ] 5.7: GET /api/products/{id}/references - List references
-- [ ] 5.8: DELETE /api/products/{id}/references/{ref_id} - Delete reference
+- [x] 5.6: POST /api/products/{id}/upload-references - Upload reference images
+- [x] 5.7: GET /api/products/{id}/references - List references
+- [x] 5.8: DELETE /api/products/{id}/references/{ref_id} - Delete reference
 
 ### Phase 6: Analysis Integration
-- [ ] 6.1: Create AnalysisService wrapping gpt_analyzer.py
-- [ ] 6.2: POST /api/products/{id}/analyze - Trigger analysis
-- [ ] 6.3: Save YAML to product_specifications table
-- [ ] 6.4: Extract and store JSONB metadata (dimensions, colors)
-- [ ] 6.5: Return analysis results with confidence scores
+- [x] 6.1: Create AnalysisService wrapping gpt_analyzer.py
+- [x] 6.2: POST /api/products/{id}/analyze - Trigger analysis
+- [x] 6.3: Save YAML to product_specifications table
+- [x] 6.4: Extract and store JSONB metadata (dimensions, colors)
+- [x] 6.5: Return analysis results with confidence scores
 - [ ] 6.6: Test with stasher_half_gallon images
 
 ### Phase 7: Specification Management
-- [ ] 7.1: GET /api/products/{id}/specifications - List all versions
-- [ ] 7.2: GET /api/products/{id}/specifications/active - Get active spec
-- [ ] 7.3: GET /api/products/{id}/specifications/{version} - Get specific version
-- [ ] 7.4: PUT /api/products/{id}/specifications/{id} - Update spec (create new version)
-- [ ] 7.5: POST /api/products/{id}/specifications/{id}/activate - Set active version
-- [ ] 7.6: Test version control workflow
+- [x] 7.1: GET /api/products/{id}/specifications - List all versions
+- [x] 7.2: GET /api/products/{id}/specifications/active - Get active spec
+- [x] 7.3: GET /api/products/{id}/specifications/{version} - Get specific version
+- [x] 7.4: PUT /api/specifications/{id} - Update spec (create new version)
+- [x] 7.5: POST /api/specifications/{id}/activate - Set active version
+- [x] 7.6: Version control workflow implemented
 
 ### Phase 8: Generation Integration
 - [ ] 8.1: Create GenerationService wrapping generate_test.py

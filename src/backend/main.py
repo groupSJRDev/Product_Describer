@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.config import CORS_ORIGINS
 from backend.api.auth import router as auth_router
 from backend.api.products import router as products_router
+from backend.api.analysis import router as analysis_router
 
 # Create FastAPI app
 app = FastAPI(
@@ -29,6 +30,7 @@ app.add_middleware(
 # Include routers
 app.include_router(auth_router, prefix="/api")
 app.include_router(products_router, prefix="/api")
+app.include_router(analysis_router, prefix="/api")
 
 
 @app.get("/")
