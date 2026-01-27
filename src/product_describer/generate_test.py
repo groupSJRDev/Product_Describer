@@ -28,83 +28,13 @@ from product_describer.logger import setup_logger
 
 logger = setup_logger(__name__)
 
-
-def _extract_key_specifications(specs: Dict[str, Any]) -> Dict[str, str]:
-    """Extract key specifications for prompt emphasis.
-
-    Args:
-        specs: Product specifications dictionary
-
-    Returns:
-        Dictionary with 'critical' specifications formatted for prompt
-    """
-    critical_items = []
-
-    # Extract dimensions if available
-    if "dimensions" in specs and "primary" in specs["dimensions"]:
-        dims = specs["dimensions"]["primary"]
-        if "width" in dims and dims["width"].get("value"):
-            critical_items.append(
-                f"- Width: {dims['width']['value']}{dims['width'].get('unit', 'mm')}"
-            )
-        if "height" in dims and dims["height"].get("value"):
-            critical_items.append(
-                f"- Height: {dims['height']['value']}{dims['height'].get('unit', 'mm')}"
-            )
-        if "depth" in dims and dims["depth"].get("value"):
-            critical_items.append(
-                f"- Depth: {dims['depth']['value']}{dims['depth'].get('unit', 'mm')}"
-            )
-
-    # Extract colors if available
-    if "colors" in specs:
-        colors_data = specs["colors"]
-        if "primary" in colors_data and colors_data["primary"].get("hex"):
-            critical_items.append(
-                f"- Primary color: {colors_data['primary']['hex']} ({colors_data['primary'].get('name', 'unnamed')})"
-            )
-        if "secondary" in colors_data and colors_data["secondary"].get("hex"):
-            critical_items.append(
-                f"- Secondary color: {colors_data['secondary']['hex']} ({colors_data['secondary'].get('name', 'unnamed')})"
-            )
-
-    # Extract material type if available
-    if "materials" in specs and "primary_material" in specs["materials"]:
-        mat = specs["materials"]["primary_material"]
-        if mat.get("type"):
-            critical_items.append(f"- Material: {mat['type']}")
-        if mat.get("finish"):
-            critical_items.append(f"- Finish: {mat['finish']}")
-
-    # Extract transparency if available
-    if (
-        "materials" in specs
-        and "optical_properties" in specs["materials"]
-        and "transparency" in specs["materials"]["optical_properties"]
-    ):
-        trans = specs["materials"]["optical_properties"]["transparency"]
-        if trans.get("type") and trans.get("percentage"):
-            critical_items.append(
-                f"- Transparency: {trans['type']} ({trans['percentage']}%)"
-            )
-
-    # Extract label info if available
-    if "labels" in specs and specs["labels"].get("present"):
-        if "primary_label" in specs["labels"]:
-            label = specs["labels"]["primary_label"]
-            if "content" in label and label["content"].get("text_content"):
-                critical_items.append(
-                    f"- Label text: '{label['content']['text_content']}'"
-                )
-            if "position" in label and label.get("position"):
-                critical_items.append(f"- Label position: {label['position']}")
-
-    return {
-        "critical": "\n".join(critical_items)
-        if critical_items
-        else "- See full specifications below"
-    }
-
+# Import from backend utils (shared logic)
+try:
+    from backend.utils.specs import extract_critical_specs
+except ImportError:
+    import sys
+    sys.path.append(str(Path(__file__).parent.parent))
+    from backend.utils.specs import extract_critical_specs
 
 def load_yaml_specs(yaml_path: Path) -> str:
     """Load YAML specifications and convert to formatted string.
@@ -165,7 +95,7 @@ def generate_image_from_specs(
     logger.info(f"  Size: {reference_image.size}")
 
     # Extract key specifications for emphasis
-    key_specs = _extract_key_specifications(specs_dict)
+    key_specs = extract_critical_specs(specs_dict)
 
     # Construct the full prompt with structured priorities
     full_prompt = f"""

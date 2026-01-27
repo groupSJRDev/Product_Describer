@@ -11,6 +11,8 @@ from backend.models import User, Product, ProductReferenceImage
 from backend.api.schemas import ProductCreate, ProductResponse, ProductUpdate, ReferenceImageResponse
 from backend.api.dependencies import get_current_user
 from backend.services.storage import storage_service
+from backend.services.product import product_service
+from backend.utils.images import validate_and_process_image
 
 router = APIRouter(prefix="/products", tags=["Products"])
 
@@ -22,22 +24,7 @@ def create_product(
     current_user: User = Depends(get_current_user)
 ):
     """Create a new product."""
-    # Check if slug already exists
-    existing = db.query(Product).filter(Product.slug == product.slug).first()
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Product with slug '{product.slug}' already exists"
-        )
-    
-    db_product = Product(
-        **product.model_dump(),
-        created_by=current_user.id
-    )
-    db.add(db_product)
-    db.commit()
-    db.refresh(db_product)
-    return db_product
+    return product_service.create_product(db, product, current_user.id)
 
 
 @router.get("", response_model=List[ProductResponse])
@@ -48,8 +35,7 @@ def list_products(
     current_user: User = Depends(get_current_user)
 ):
     """List all products."""
-    products = db.query(Product).filter(Product.is_active == True).offset(skip).limit(limit).all()
-    return products
+    return product_service.list_products(db, skip, limit)
 
 
 @router.get("/{product_id}", response_model=ProductResponse)
@@ -59,10 +45,7 @@ def get_product(
     current_user: User = Depends(get_current_user)
 ):
     """Get product by ID."""
-    product = db.query(Product).filter(Product.id == product_id).first()
-    if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
-    return product
+    return product_service.get_product(db, product_id)
 
 
 @router.put("/{product_id}", response_model=ProductResponse)
@@ -73,17 +56,7 @@ def update_product(
     current_user: User = Depends(get_current_user)
 ):
     """Update product."""
-    product = db.query(Product).filter(Product.id == product_id).first()
-    if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
-    
-    update_data = product_update.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(product, field, value)
-    
-    db.commit()
-    db.refresh(product)
-    return product
+    return product_service.update_product(db, product_id, product_update)
 
 
 @router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -93,9 +66,8 @@ def delete_product(
     current_user: User = Depends(get_current_user)
 ):
     """Delete product (soft delete)."""
-    product = db.query(Product).filter(Product.id == product_id).first()
-    if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
+    product_service.delete_product(db, product_id)
+
     
 
 
@@ -109,44 +81,23 @@ async def upload_reference_images(
     current_user: User = Depends(get_current_user)
 ):
     """Upload reference images for a product."""
-    product = db.query(Product).filter(Product.id == product_id).first()
-    if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
-    
-    # Validate files
-    allowed_types = {"image/jpeg", "image/jpg", "image/png", "image/webp"}
-    for file in files:
-        if file.content_type not in allowed_types:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid file type: {file.content_type}. Allowed: {allowed_types}"
-            )
+    product = product_service.get_product(db, product_id)
     
     uploaded_images = []
-    existing_count = db.query(ProductReferenceImage).filter(
-        ProductReferenceImage.product_id == product_id
-    ).count()
     
-    for idx, file in enumerate(files):
-        # Read file
-        content = await file.read()
-        file_obj = io.BytesIO(content)
-        
-        # Get image dimensions
-        try:
-            img = Image.open(io.BytesIO(content))
-            width, height = img.size
-        except Exception:
-            width, height = None, None
+    for file in files:
+        # Process image using helper
+        file_obj, filename, width, height = validate_and_process_image(file)
         
         # Save to storage
-        filename, storage_path = storage_service.save_reference_image(
+        saved_filename, storage_path = storage_service.save_reference_image(
             product.slug,
             file_obj,
-            file.filename
+            filename
         )
         
         # Create database record
+
         ref_image = ProductReferenceImage(
             product_id=product_id,
             filename=filename,

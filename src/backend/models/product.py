@@ -17,6 +17,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from backend.database import Base
+from backend.services.storage import storage_service
 
 
 class Product(Base):
@@ -75,6 +76,10 @@ class ProductReferenceImage(Base):
 
     # Relationships
     product = relationship("Product", back_populates="references")
+
+    @property
+    def url(self) -> str:
+        return storage_service.get_public_url(self.storage_path)
 
     def __repr__(self):
         return f"<ProductReferenceImage(id={self.id}, filename='{self.filename}')>"

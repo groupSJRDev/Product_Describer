@@ -97,7 +97,7 @@ class StorageService:
         
         relative_path = str(storage_path.relative_to(self.local_root))
         return relative_path
-    
+
     def save_generated_image(
         self,
         product_slug: str,
@@ -120,14 +120,21 @@ class StorageService:
         relative_path = str(storage_path.relative_to(self.local_root))
         return filename, relative_path
     
-    def get_file_path(self, storage_path: str) -> Path:
-        """Get the full file system path from storage path."""
-        return self.local_root / storage_path
+    def get_absolute_path(self, relative_path: str) -> Path:
+        """
+        Get the absolute filesystem path for a stored file.
+        Use this for internal operations (Analysis, Generation) that need file access.
+        """
+        return self.local_root / relative_path
+
+    def get_file_path(self, relative_path: str) -> Path:
+        """Legacy alias for get_absolute_path."""
+        return self.get_absolute_path(relative_path)
     
     def delete_file(self, storage_path: str) -> bool:
         """Delete a file from storage."""
         try:
-            file_path = self.get_file_path(storage_path)
+            file_path = self.get_absolute_path(storage_path)
             if file_path.exists():
                 file_path.unlink()
                 return True
@@ -135,10 +142,11 @@ class StorageService:
         except Exception:
             return False
     
-    def get_file_url(self, storage_path: str) -> str:
+    def get_public_url(self, storage_path: str) -> str:
         """Get the URL to access a file."""
         # For local storage, return the API endpoint
         return f"/api/files/{storage_path}"
+
 
 
 # Singleton instance
