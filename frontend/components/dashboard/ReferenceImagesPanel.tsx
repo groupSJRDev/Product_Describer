@@ -154,14 +154,14 @@ export function ReferenceImagesPanel({
   const slots = Array.from({ length: 4 }, (_, i) => images[i] || null);
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">
+    <div className="flex flex-col rounded-lg border border-gray-200 bg-white p-3">
+      <div className="mb-2 flex items-center justify-between flex-shrink-0">
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold text-gray-900">
             Reference Images
           </h3>
-          <p className="text-sm text-gray-500">
-            Images used for generation context (max 4)
+          <p className="text-xs text-gray-500 truncate">
+            Max 4 images for generation context
           </p>
         </div>
         <button
@@ -192,16 +192,20 @@ export function ReferenceImagesPanel({
       </div>
 
       {isLoading ? (
-        <div className="flex h-40 items-center justify-center text-gray-500">
-          <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-          Loading images...
+        <div className="flex items-center justify-center text-gray-500 py-8">
+          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+          <span className="text-sm">Loading...</span>
         </div>
       ) : (
-        <div className="grid grid-cols-4 gap-4">
+        <div className="flex gap-3 flex-wrap">
           {slots.map((image, index) => (
             <div
               key={image?.id || `empty-${index}`}
-              className="group relative aspect-square overflow-hidden rounded-lg border-2 border-dashed border-gray-300 bg-gray-50"
+              className="group relative overflow-hidden rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 transition-all flex-shrink-0"
+              style={{
+                width: '100px',
+                height: '100px'
+              }}
             >
               {image ? (
                 <>
@@ -211,13 +215,15 @@ export function ReferenceImagesPanel({
                     className="h-full w-full cursor-pointer object-cover transition-opacity hover:opacity-75"
                     onClick={() => handleImageClick(image)}
                   />
-                  <div className="absolute left-2 top-2 rounded-full bg-purple-600 px-2 py-0.5 text-xs font-medium text-white">
+                  <div 
+                    className="absolute left-2 top-2 rounded-full bg-purple-600 px-2 py-0.5 text-xs font-medium text-white"
+                  >
                     {index + 1}
                   </div>
                   <button
                     onClick={() => handleDelete(image.id)}
                     disabled={deletingId === image.id}
-                    className="absolute right-2 top-2 z-50 rounded-full bg-red-600 p-1.5 text-white opacity-0 transition-opacity hover:bg-red-700 group-hover:opacity-100 disabled:cursor-not-allowed"
+                    className="absolute right-2 top-2 z-50 rounded-full bg-red-600 p-1 text-white opacity-0 transition-all hover:bg-red-700 group-hover:opacity-100 disabled:cursor-not-allowed"
                   >
                     {deletingId === image.id ? (
                       <Loader2 className="h-3 w-3 animate-spin" />
@@ -228,7 +234,7 @@ export function ReferenceImagesPanel({
                 </>
               ) : (
                 <div className="flex h-full flex-col items-center justify-center text-gray-400">
-                  <ImageIcon className="h-8 w-8 mb-2" />
+                  <ImageIcon className="h-8 w-8 mb-1" />
                   <span className="text-xs">Slot {index + 1}</span>
                 </div>
               )}

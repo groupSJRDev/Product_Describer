@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useProducts } from '@/hooks/useProducts';
 import { useGeneration } from '@/hooks/useGeneration';
 import { ProductSelector } from '@/components/dashboard/ProductSelector';
@@ -106,49 +106,48 @@ export default function GeneratePage() {
       {/* Main Workspace */}
       <div className="flex flex-1 flex-col overflow-hidden bg-gray-100">
         
-        {/* Header / Controls */}
-        <div className="border-b bg-white px-6 py-4 shadow-sm z-10">
-             <div className="mx-auto max-w-5xl">
-                {/* Reference Images Panel */}
-                {selectedProductId && selectedProduct && (
-                  <div className="mb-6">
-                    <ReferenceImagesPanel
-                      productId={selectedProductId}
-                      productSlug={selectedProduct.slug}
-                    />
-                  </div>
-                )}
+        {/* Top Container: Reference Images + Generation Form - Fixed */}
+        <div className="border-b bg-white shadow-sm px-6 py-4 overflow-y-auto">
+          <div className="mx-auto w-full max-w-5xl space-y-3">
+            {/* Reference Images Panel */}
+            {selectedProductId && selectedProduct && (
+              <ReferenceImagesPanel
+                productId={selectedProductId}
+                productSlug={selectedProduct.slug}
+              />
+            )}
 
-                <GenerationForm 
-                    onGenerate={handleGenerate}
-                    isGenerating={isGenerating}
-                    disabled={!selectedProductId}
-                />
-             </div>
+            {/* Generation Form */}
+          <GenerationForm 
+              onGenerate={handleGenerate}
+              isGenerating={isGenerating}
+              disabled={!selectedProductId}
+            />
+          </div>
         </div>
 
-        {/* Gallery Area */}
-        <div className="flex-1 overflow-y-auto px-6 py-8">
-            <div className="mx-auto max-w-5xl">
-                <div className="mb-4 flex items-center justify-between">
-                    <h2 className="text-lg font-semibold text-gray-900">Results Gallery</h2>
-                    {generations.length > 0 && (
-                        <span className="text-xs text-gray-500">{generations.length} items</span>
-                    )}
-                </div>
-                
-                {selectedProductId ? (
-                    <ResultsGallery 
-                        generations={generations} 
-                        isLoading={isLoadingHistory}
-                        onDelete={handleDelete}
-                    />
-                ) : (
-                    <div className="flex h-64 items-center justify-center text-gray-400">
-                        Select a product to view generations.
-                    </div>
-                )}
+        {/* Bottom Container: Results Gallery */}
+        <div className="flex-1 overflow-y-auto bg-gray-50 px-6 py-8">
+          <div className="mx-auto max-w-5xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">Results Gallery</h2>
+              {generations.length > 0 && (
+                <span className="text-xs text-gray-500">{generations.length} items</span>
+              )}
             </div>
+            
+            {selectedProductId ? (
+              <ResultsGallery 
+                generations={generations} 
+                isLoading={isLoadingHistory}
+                onDelete={handleDelete}
+              />
+            ) : (
+              <div className="flex h-64 items-center justify-center text-gray-400">
+                Select a product to view generations.
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
