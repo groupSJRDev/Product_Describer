@@ -2,8 +2,9 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
-from backend.config import CORS_ORIGINS
+from backend.config import CORS_ORIGINS, STORAGE_LOCAL_ROOT
 from backend.api.auth import router as auth_router
 from backend.api.products import router as products_router
 from backend.api.analysis import router as analysis_router
@@ -27,6 +28,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount static files
+app.mount("/files", StaticFiles(directory=STORAGE_LOCAL_ROOT), name="files")
 
 # Include routers
 app.include_router(auth_router, prefix="/api")

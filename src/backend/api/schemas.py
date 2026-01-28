@@ -123,23 +123,6 @@ class GenerationRequest(BaseModel):
     specification_id: Optional[int] = None
 
 
-class GenerationResponse(BaseModel):
-    id: int
-    product_id: int
-    specification_id: Optional[int]
-    prompt: str
-    aspect_ratio: str
-    image_count: int
-    status: str
-    created_at: datetime
-    started_at: Optional[datetime]
-    completed_at: Optional[datetime]
-    error_message: Optional[str]
-
-    class Config:
-        from_attributes = True
-
-
 class GeneratedImageResponse(BaseModel):
     id: int
     generation_request_id: int
@@ -154,3 +137,22 @@ class GeneratedImageResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class GenerationResponse(BaseModel):
+    id: int
+    product_id: int
+    specification_id: Optional[int]
+    prompt: str
+    aspect_ratio: str
+    image_count: int
+    status: str
+    created_at: datetime
+    started_at: Optional[datetime]
+    completed_at: Optional[datetime]
+    error_message: Optional[str]
+    generated_images: List[GeneratedImageResponse] = Field(default=[], alias="images")
+
+    class Config:
+        from_attributes = True
+        populate_by_name = True

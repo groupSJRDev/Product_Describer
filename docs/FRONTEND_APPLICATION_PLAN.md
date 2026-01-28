@@ -16,21 +16,47 @@ Design a Next.js web application for Product Describer with two main pages: Imag
 - **Next.js 16** - App Router
 - **React 19** - Latest features
 - **TypeScript** - Type safety
-- **Tailwind CSS** - Styling
+- **Tailwind CSS v4** - Styling (CSS-first configuration)
 
 ### UI Components
-- **Radix UI** - Accessible primitives (Dialog, Dropdown, etc.)
+- **Radix UI** - Accessible primitives (Dialog, etc.)
 - **Lucide React** - Icons
-- **Shadcn/ui** - Pre-built component library (optional)
+- **Custom Components** - Modeled after VML Brand-Based Generation (see Design System below)
 
 ### State & Data
 - **Axios** - API client
 - **React Context** - Auth state
 - **Local Storage** - Token persistence
 
-### Development
-- **ESLint** - Linting
-- **Jest + Testing Library** - Unit/integration tests
+---
+
+## Design System & Styling
+
+The application will replicate the visual style of the "VML Brand_Based_Image_Generation" project: a professional, high-density SaaS aesthetic.
+
+### Color Palette
+- **Backgrounds**: `bg-gray-50` (Sidebar), `bg-gray-100` (Main Content), `bg-white` (Cards/Panels).
+- **Text**: `text-gray-900` (Headings), `text-gray-700` (Primary), `text-gray-600` (Secondary), `text-gray-400` (Metadata).
+- **Primary Actions**: Blue (`text-blue-700`, `bg-blue-100` for active states).
+- **Secondary Actions**: Purple (`hover:text-purple-600`, loading states).
+- **Destructive**: Red (`text-red-600`, `hover:bg-red-50`).
+- **Status**: Green (`text-green-500`, `bg-green-100` for active badges).
+
+### Typography
+- **Font**: Geist Sans / Geist Mono (Next.js defaults).
+- **Scale**: High density focus.
+  - Headings: `text-lg font-semibold`.
+  - Body: `text-sm`.
+  - Metadata/Labels: `text-xs` or `text-[10px]`.
+
+### UI Patterns
+- **Layout**: Fixed sidebar (w-64, border-r) + flexible main content area.
+- **Cards**: `rounded-lg border bg-white shadow-sm hover:shadow-md`.
+- **Buttons**:
+  - Icon-only: `text-gray-500 hover:bg-gray-200 hover:text-purple-600 rounded p-1`.
+  - Nav Items: `w-full rounded-md px-3 py-2 text-left text-sm`.
+  - Overlay Actions: `rounded-full bg-white/80 backdrop-blur-sm shadow-sm`.
+- **Feedback**: `Loader2` animate-spin icons for sync operations.
 
 ---
 

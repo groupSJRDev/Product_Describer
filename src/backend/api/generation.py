@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from backend.database import get_db
 from backend.models import User, Product
+from backend.models.generation import GenerationRequest, GeneratedImage
 from backend.api.schemas import (
     GenerationRequest as GenerationRequestSchema,
     GenerationResponse,
@@ -13,6 +14,7 @@ from backend.api.schemas import (
 )
 from backend.api.dependencies import get_current_user
 from backend.services.generation import generation_service
+from backend.services.storage import storage_service
 
 router = APIRouter(tags=["Image Generation"])
 
@@ -124,3 +126,48 @@ def get_product_gallery(
     
     images = generation_service.get_product_gallery(product_id, db, skip, limit)
     return images
+
+
+@router.delete("/generation-requests/{request_id}")
+def delete_generation_request(
+    request_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Delete a generation request and all its associated images.
+    
+    This will:
+    - Cancel the generation if it's still processing
+    - Delete all generated image files from storage
+    - Delete all database records for generated images
+    - Delete the generation request record
+    """
+    request = db.query(GenerationRequest).filter(GenerationRequest.id == request_id).first()
+    
+    if not request:
+        raise HTTPException(status_code=404, detail="Generation request not found")
+    
+    # If processing or pending, cancel it
+    if request.status in ['pending', 'processing']:
+        generation_service.cancel_generation(request_id)
+    
+    # Delete all associated images and their files
+    images = db.query(GeneratedImage).filter(GeneratedImage.generation_request_id == request_id).all()
+    for image in images:
+        # Delete file from storage if it exists
+        if image.storage_path:
+            try:
+                storage_service.delete_file(image.storage_path)
+            except Exception as e:
+                # Log but don't fail if file doesn't exist
+                print(f"Warning: Could not delete file {image.storage_path}: {e}")
+        
+        # Delete database record
+        db.delete(image)
+    
+    # Delete the generation request
+    db.delete(request)
+    db.commit()
+    
+    return {"message": "Generation request deleted successfully", "id": request_id}

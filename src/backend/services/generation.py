@@ -4,10 +4,11 @@ import yaml
 import io
 import tempfile
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Set
 from datetime import datetime
 from sqlalchemy.orm import Session
 from PIL import Image
+import threading
 
 from backend.models import (
     Product,
@@ -25,6 +26,33 @@ from backend.database import SessionLocal
 
 class GenerationService:
     """Service for generating images using Gemini."""
+    
+    def __init__(self):
+        # Track active generation request IDs
+        self._active_generations: Set[int] = set()
+        self._cancelled_generations: Set[int] = set()
+        self._lock = threading.Lock()
+    
+    def is_cancelled(self, request_id: int) -> bool:
+        """Check if a generation has been cancelled."""
+        with self._lock:
+            return request_id in self._cancelled_generations
+    
+    def cancel_generation(self, request_id: int):
+        """Mark a generation as cancelled."""
+        with self._lock:
+            self._cancelled_generations.add(request_id)
+    
+    def _mark_active(self, request_id: int):
+        """Mark a generation as active."""
+        with self._lock:
+            self._active_generations.add(request_id)
+    
+    def _mark_inactive(self, request_id: int):
+        """Mark a generation as inactive."""
+        with self._lock:
+            self._active_generations.discard(request_id)
+            self._cancelled_generations.discard(request_id)
     
     def _generate_single_image(
         self,
@@ -137,9 +165,17 @@ class GenerationService:
         """
         db = SessionLocal()
         try:
+            # Mark as active
+            self._mark_active(request_id)
+            
             request = db.query(GenerationRequest).filter(GenerationRequest.id == request_id).first()
             if not request:
                 print(f"Generation request {request_id} not found")
+                return
+
+            # Check if already cancelled
+            if self.is_cancelled(request_id):
+                print(f"Generation request {request_id} was cancelled before starting")
                 return
 
             # Update status to processing
@@ -186,6 +222,15 @@ class GenerationService:
             generated_images = []
             
             for i in range(request.image_count):
+                # Check for cancellation before each image
+                if self.is_cancelled(request_id):
+                    print(f"Generation request {request_id} was cancelled during processing")
+                    request.status = "cancelled"
+                    request.completed_at = datetime.now()
+                    request.error_message = "Generation cancelled by user"
+                    db.commit()
+                    return
+                
                 # Call wrapper function to generate image and get bytes
                 image_data = self._generate_single_image(
                     reference_image_path=ref_image_path,
@@ -195,6 +240,15 @@ class GenerationService:
                     aspect_ratio=request.aspect_ratio,
                     resolution=request.resolution
                 )
+                
+                # Check cancellation after generation too
+                if self.is_cancelled(request_id):
+                    print(f"Generation request {request_id} was cancelled after image generation")
+                    request.status = "cancelled"
+                    request.completed_at = datetime.now()
+                    request.error_message = "Generation cancelled by user"
+                    db.commit()
+                    return
                 
                 if image_data:
                     # image_data is the raw bytes from the generation
@@ -228,16 +282,22 @@ class GenerationService:
             db.commit()
             
         except Exception as e:
-            # Update request with error
-            if request:
+            # Check if it was cancelled
+            if self.is_cancelled(request_id):
+                request.status = "cancelled"
+                request.error_message = "Generation cancelled by user"
+            else:
+                # Update request with error
                 request.status = "failed"
                 request.error_message = str(e)
-                request.completed_at = datetime.now()
-                db.commit()
-            print(f"Generation failed: {e}")
-            # Do not re-raise, as this is a background task
+            
+            request.completed_at = datetime.now()
+            db.commit()
+            print(f"Generation error for request {request_id}: {e}")
         
         finally:
+            # Always mark as inactive when done
+            self._mark_inactive(request_id)
             db.close()
     
     def get_generation_status(

@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+export PYTHONPATH=$PYTHONPATH:/app/src
+
 # Wait for database availability (simple wait, in prod use wait-for-it)
 echo "Waiting for database..."
 sleep 5
