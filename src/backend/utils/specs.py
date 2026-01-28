@@ -1,5 +1,6 @@
 from typing import Dict, Any
 
+
 def extract_critical_specs(specs: Dict[str, Any]) -> Dict[str, str]:
     """Extract key specifications for prompt emphasis.
 
@@ -28,7 +29,10 @@ def extract_critical_specs(specs: Dict[str, Any]) -> Dict[str, str]:
             )
 
     # Extract primary colors
-    if "visual_characteristics" in specs and "primary_colors" in specs["visual_characteristics"]:
+    if (
+        "visual_characteristics" in specs
+        and "primary_colors" in specs["visual_characteristics"]
+    ):
         colors = specs["visual_characteristics"]["primary_colors"]
         if colors:
             color_strs = []
@@ -58,7 +62,7 @@ def extract_critical_specs(specs: Dict[str, Any]) -> Dict[str, str]:
     if "packaging" in specs and "label" in specs["packaging"]:
         label = specs["packaging"]["label"]
         if label:
-             if isinstance(label, dict) and "position" in label:
+            if isinstance(label, dict) and "position" in label:
                 critical_items.append(f"- Label position: {label['position']}")
 
     return {

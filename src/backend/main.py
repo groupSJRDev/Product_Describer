@@ -42,11 +42,7 @@ app.include_router(generation_router, prefix="/api")
 @app.get("/")
 def root():
     """Root endpoint."""
-    return {
-        "message": "Product Describer API",
-        "version": "1.0.0",
-        "docs": "/api/docs"
-    }
+    return {"message": "Product Describer API", "version": "1.0.0", "docs": "/api/docs"}
 
 
 @app.get("/health")

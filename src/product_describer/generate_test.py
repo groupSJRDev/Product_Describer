@@ -24,7 +24,11 @@ except ImportError:
     sys.exit(1)
 
 from product_describer.config import Config
-from product_describer.constants import GENERATION_PROMPT_FILENAME, MAX_RETRY_ATTEMPTS, RETRY_BACKOFF_FACTOR
+from product_describer.constants import (
+    GENERATION_PROMPT_FILENAME,
+    MAX_RETRY_ATTEMPTS,
+    RETRY_BACKOFF_FACTOR,
+)
 from product_describer.exceptions import ConfigurationError, APIError
 from product_describer.logger import setup_logger
 
@@ -35,8 +39,10 @@ try:
     from backend.utils.specs import extract_critical_specs
 except ImportError:
     import sys
+
     sys.path.append(str(Path(__file__).parent.parent))
     from backend.utils.specs import extract_critical_specs
+
 
 def load_yaml_specs(yaml_path: Path) -> str:
     """Load YAML specifications and convert to formatted string.

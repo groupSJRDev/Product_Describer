@@ -15,7 +15,7 @@ from backend.models import (
     ProductSpecification,
     ProductReferenceImage,
     GenerationRequest,
-    GeneratedImage
+    GeneratedImage,
 )
 from backend.services.storage import storage_service
 from backend.config import GEMINI_API_KEY
@@ -24,36 +24,37 @@ from product_describer.generate_test import generate_image_from_specs
 
 from backend.database import SessionLocal
 
+
 class GenerationService:
     """Service for generating images using Gemini."""
-    
+
     def __init__(self):
         # Track active generation request IDs
         self._active_generations: Set[int] = set()
         self._cancelled_generations: Set[int] = set()
         self._lock = threading.Lock()
-    
+
     def is_cancelled(self, request_id: int) -> bool:
         """Check if a generation has been cancelled."""
         with self._lock:
             return request_id in self._cancelled_generations
-    
+
     def cancel_generation(self, request_id: int):
         """Mark a generation as cancelled."""
         with self._lock:
             self._cancelled_generations.add(request_id)
-    
+
     def _mark_active(self, request_id: int):
         """Mark a generation as active."""
         with self._lock:
             self._active_generations.add(request_id)
-    
+
     def _mark_inactive(self, request_id: int):
         """Mark a generation as inactive."""
         with self._lock:
             self._active_generations.discard(request_id)
             self._cancelled_generations.discard(request_id)
-    
+
     def _generate_single_image(
         self,
         reference_image_path: str,
@@ -61,11 +62,11 @@ class GenerationService:
         specs_dict: dict,
         custom_prompt: str,
         aspect_ratio: str,
-        resolution: str
+        resolution: str,
     ) -> bytes:
         """
         Generate a single image and return its bytes.
-        
+
         Args:
             reference_image_path: Path to reference image
             yaml_specs: YAML specifications as string
@@ -73,14 +74,14 @@ class GenerationService:
             custom_prompt: Custom generation prompt
             aspect_ratio: Image aspect ratio
             resolution: Image resolution
-        
+
         Returns:
             bytes: Generated image data
         """
         # Create a temporary file for output
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_file:
             tmp_path = Path(tmp_file.name)
-        
+
         try:
             # Call the existing generate function
             generate_image_from_specs(
@@ -91,20 +92,20 @@ class GenerationService:
                 output_path=tmp_path,
                 api_key=GEMINI_API_KEY,
                 aspect_ratio=aspect_ratio,
-                resolution=resolution
+                resolution=resolution,
             )
-            
+
             # Read the generated image
             with open(tmp_path, "rb") as f:
                 image_data = f.read()
-            
+
             return image_data
-            
+
         finally:
             # Clean up temporary file
             if tmp_path.exists():
                 tmp_path.unlink()
-    
+
     def create_generation_request(
         self,
         product: Product,
@@ -115,11 +116,11 @@ class GenerationService:
         image_count: int,
         custom_prompt_override: Optional[str],
         user_id: int,
-        db: Session
+        db: Session,
     ) -> GenerationRequest:
         """
         Create a new generation request.
-        
+
         Args:
             product: The product to generate images for
             prompt: User's generation prompt
@@ -130,7 +131,7 @@ class GenerationService:
             custom_prompt_override: Optional custom prompt text
             user_id: ID of user creating the request
             db: Database session
-        
+
         Returns:
             GenerationRequest: The created request
         """
@@ -144,22 +145,19 @@ class GenerationService:
             resolution=resolution,
             image_count=image_count,
             status="pending",
-            created_by=user_id
+            created_by=user_id,
         )
-        
+
         db.add(gen_request)
         db.commit()
         db.refresh(gen_request)
-        
+
         return gen_request
-    
-    def process_generation(
-        self,
-        request_id: int
-    ) -> None:
+
+    def process_generation(self, request_id: int) -> None:
         """
         Process a generation request and create images.
-        
+
         Args:
             request_id: The ID of the generation request to process
         """
@@ -167,8 +165,12 @@ class GenerationService:
         try:
             # Mark as active
             self._mark_active(request_id)
-            
-            request = db.query(GenerationRequest).filter(GenerationRequest.id == request_id).first()
+
+            request = (
+                db.query(GenerationRequest)
+                .filter(GenerationRequest.id == request_id)
+                .first()
+            )
             if not request:
                 print(f"Generation request {request_id} not found")
                 return
@@ -182,55 +184,72 @@ class GenerationService:
             request.status = "processing"
             request.started_at = datetime.now()
             db.commit()
-            
+
             # Get product and specification
             product = db.query(Product).filter(Product.id == request.product_id).first()
-            
+
             if request.specification_id:
-                spec = db.query(ProductSpecification).filter(
-                    ProductSpecification.id == request.specification_id
-                ).first()
+                spec = (
+                    db.query(ProductSpecification)
+                    .filter(ProductSpecification.id == request.specification_id)
+                    .first()
+                )
             else:
                 # Use active specification
-                spec = db.query(ProductSpecification).filter(
-                    ProductSpecification.product_id == request.product_id,
-                    ProductSpecification.is_active == True
-                ).first()
-            
+                spec = (
+                    db.query(ProductSpecification)
+                    .filter(
+                        ProductSpecification.product_id == request.product_id,
+                        ProductSpecification.is_active == True,
+                    )
+                    .first()
+                )
+
             if not spec:
                 raise ValueError("No specification found for generation")
-            
+
             # Parse YAML
             specs_dict = yaml.safe_load(spec.yaml_content)
-            
+
             # Get a reference image to use for generation
-            ref_images = db.query(ProductReferenceImage).filter(
-                ProductReferenceImage.product_id == product.id
-            ).order_by(ProductReferenceImage.is_primary.desc()).all()
-            
+            ref_images = (
+                db.query(ProductReferenceImage)
+                .filter(ProductReferenceImage.product_id == product.id)
+                .order_by(ProductReferenceImage.is_primary.desc())
+                .all()
+            )
+
             if not ref_images:
                 raise ValueError("No reference images found for generation")
-            
+
             # Use primary image or first one
             primary_ref = ref_images[0]
-            ref_image_path = str(storage_service.get_file_path(primary_ref.storage_path))
-            
+            ref_image_path = str(
+                storage_service.get_file_path(primary_ref.storage_path)
+            )
+
             # Build full prompt (combine user prompt with spec-based prompt)
-            full_prompt = request.custom_prompt_override if request.custom_prompt_override else request.prompt
-            
+            full_prompt = (
+                request.custom_prompt_override
+                if request.custom_prompt_override
+                else request.prompt
+            )
+
             # Generate images
             generated_images = []
-            
+
             for i in range(request.image_count):
                 # Check for cancellation before each image
                 if self.is_cancelled(request_id):
-                    print(f"Generation request {request_id} was cancelled during processing")
+                    print(
+                        f"Generation request {request_id} was cancelled during processing"
+                    )
                     request.status = "cancelled"
                     request.completed_at = datetime.now()
                     request.error_message = "Generation cancelled by user"
                     db.commit()
                     return
-                
+
                 # Call wrapper function to generate image and get bytes
                 image_data = self._generate_single_image(
                     reference_image_path=ref_image_path,
@@ -238,30 +257,30 @@ class GenerationService:
                     specs_dict=specs_dict,
                     custom_prompt=full_prompt,
                     aspect_ratio=request.aspect_ratio,
-                    resolution=request.resolution
+                    resolution=request.resolution,
                 )
-                
+
                 # Check cancellation after generation too
                 if self.is_cancelled(request_id):
-                    print(f"Generation request {request_id} was cancelled after image generation")
+                    print(
+                        f"Generation request {request_id} was cancelled after image generation"
+                    )
                     request.status = "cancelled"
                     request.completed_at = datetime.now()
                     request.error_message = "Generation cancelled by user"
                     db.commit()
                     return
-                
+
                 if image_data:
                     # image_data is the raw bytes from the generation
                     image_bytes = io.BytesIO(image_data)
-                    
+
                     # Save to storage
                     filename = f"gen_{request.id}_{i+1}.png"
                     saved_filename, storage_path = storage_service.save_generated_image(
-                        product.slug,
-                        image_bytes,
-                        filename
+                        product.slug, image_bytes, filename
                     )
-                    
+
                     # Create database record
                     gen_image = GeneratedImage(
                         generation_request_id=request.id,
@@ -270,17 +289,17 @@ class GenerationService:
                         storage_path=storage_path,
                         file_size_bytes=len(image_data),
                         mime_type="image/png",
-                        generation_index=i + 1
+                        generation_index=i + 1,
                     )
-                    
+
                     db.add(gen_image)
                     generated_images.append(gen_image)
-            
+
             # Update request status
             request.status = "completed"
             request.completed_at = datetime.now()
             db.commit()
-            
+
         except Exception as e:
             # Check if it was cancelled
             if self.is_cancelled(request_id):
@@ -290,59 +309,62 @@ class GenerationService:
                 # Update request with error
                 request.status = "failed"
                 request.error_message = str(e)
-            
+
             request.completed_at = datetime.now()
             db.commit()
             print(f"Generation error for request {request_id}: {e}")
-        
+
         finally:
             # Always mark as inactive when done
             self._mark_inactive(request_id)
             db.close()
-    
+
     def get_generation_status(
-        self,
-        request_id: int,
-        db: Session
+        self, request_id: int, db: Session
     ) -> Optional[GenerationRequest]:
         """Get the status of a generation request."""
-        return db.query(GenerationRequest).filter(
-            GenerationRequest.id == request_id
-        ).first()
-    
+        return (
+            db.query(GenerationRequest)
+            .filter(GenerationRequest.id == request_id)
+            .first()
+        )
+
     def get_generated_images(
-        self,
-        request_id: int,
-        db: Session
+        self, request_id: int, db: Session
     ) -> List[GeneratedImage]:
         """Get all images from a generation request."""
-        return db.query(GeneratedImage).filter(
-            GeneratedImage.generation_request_id == request_id
-        ).order_by(GeneratedImage.generation_index).all()
-    
+        return (
+            db.query(GeneratedImage)
+            .filter(GeneratedImage.generation_request_id == request_id)
+            .order_by(GeneratedImage.generation_index)
+            .all()
+        )
+
     def get_product_generations(
-        self,
-        product_id: int,
-        db: Session,
-        skip: int = 0,
-        limit: int = 50
+        self, product_id: int, db: Session, skip: int = 0, limit: int = 50
     ) -> List[GenerationRequest]:
         """Get all generation requests for a product."""
-        return db.query(GenerationRequest).filter(
-            GenerationRequest.product_id == product_id
-        ).order_by(GenerationRequest.created_at.desc()).offset(skip).limit(limit).all()
-    
+        return (
+            db.query(GenerationRequest)
+            .filter(GenerationRequest.product_id == product_id)
+            .order_by(GenerationRequest.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
     def get_product_gallery(
-        self,
-        product_id: int,
-        db: Session,
-        skip: int = 0,
-        limit: int = 100
+        self, product_id: int, db: Session, skip: int = 0, limit: int = 100
     ) -> List[GeneratedImage]:
         """Get all generated images for a product (gallery view)."""
-        return db.query(GeneratedImage).filter(
-            GeneratedImage.product_id == product_id
-        ).order_by(GeneratedImage.created_at.desc()).offset(skip).limit(limit).all()
+        return (
+            db.query(GeneratedImage)
+            .filter(GeneratedImage.product_id == product_id)
+            .order_by(GeneratedImage.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
 
 # Singleton instance
