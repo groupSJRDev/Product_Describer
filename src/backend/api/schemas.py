@@ -113,6 +113,25 @@ class SpecificationUpdate(BaseModel):
     change_notes: Optional[str] = None
 
 
+class SpecificationCreate(BaseModel):
+    yaml_content: str
+    change_notes: Optional[str] = None
+
+
+class SpecificationListResponse(BaseModel):
+    """Lightweight specification response for list view."""
+    id: int
+    product_id: int
+    version: int
+    is_active: bool
+    created_at: datetime
+    change_notes: Optional[str]
+    yaml_preview: Optional[str] = None  # First 200 chars
+
+    class Config:
+        from_attributes = True
+
+
 # ===== Generation Schemas =====
 class GenerationRequest(BaseModel):
     prompt: str

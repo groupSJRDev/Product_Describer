@@ -6,13 +6,16 @@ import { useGeneration } from '@/hooks/useGeneration';
 import { ProductSelector } from '@/components/dashboard/ProductSelector';
 import { GenerationForm } from '@/components/dashboard/GenerationForm';
 import { ResultsGallery } from '@/components/dashboard/ResultsGallery';
-import { Layers } from 'lucide-react';
+import { SpecificationEditor } from '@/components/dashboard/SpecificationEditor';
+import { ReferenceImagesPanel } from '@/components/dashboard/ReferenceImagesPanel';
+import { Layers, Edit2 } from 'lucide-react';
 import { deleteGeneration } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 
 export default function GeneratePage() {
   const { products, isLoading: isLoadingProducts } = useProducts();
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
+  const [isSpecEditorOpen, setIsSpecEditorOpen] = useState(false);
   const { toast } = useToast();
   
   const { 
@@ -69,6 +72,8 @@ export default function GeneratePage() {
     }
   };
 
+  const selectedProduct = products.find(p => p.id === selectedProductId);
+
   return (
     <div className="flex h-full flex-col lg:flex-row overflow-hidden">
       {/* Product Selection Panel */}
@@ -84,11 +89,17 @@ export default function GeneratePage() {
             isLoading={isLoadingProducts}
         />
         
-        {/* Placeholder for Reference Images viewing in future */}
-        {selectedProductId && (
-             <div className="mt-8 rounded-lg border border-dashed border-gray-200 p-4 text-center text-xs text-gray-400">
-                Product Details & Specs viewing coming soon.
-             </div>
+        {/* Specification Editor Button */}
+        {selectedProductId && selectedProduct && (
+          <div className="mt-6">
+            <button
+              onClick={() => setIsSpecEditorOpen(true)}
+              className="w-full flex items-center justify-center gap-2 rounded-md border border-purple-300 bg-purple-50 px-4 py-2 text-sm font-medium text-purple-700 hover:bg-purple-100 transition-colors"
+            >
+              <Edit2 className="h-4 w-4" />
+              View/Edit Specification
+            </button>
+          </div>
         )}
       </div>
 
@@ -98,6 +109,16 @@ export default function GeneratePage() {
         {/* Header / Controls */}
         <div className="border-b bg-white px-6 py-4 shadow-sm z-10">
              <div className="mx-auto max-w-5xl">
+                {/* Reference Images Panel */}
+                {selectedProductId && selectedProduct && (
+                  <div className="mb-6">
+                    <ReferenceImagesPanel
+                      productId={selectedProductId}
+                      productSlug={selectedProduct.slug}
+                    />
+                  </div>
+                )}
+
                 <GenerationForm 
                     onGenerate={handleGenerate}
                     isGenerating={isGenerating}
@@ -130,6 +151,23 @@ export default function GeneratePage() {
             </div>
         </div>
       </div>
+
+      {/* Specification Editor Modal */}
+      {selectedProductId && selectedProduct && (
+        <SpecificationEditor
+          isOpen={isSpecEditorOpen}
+          onClose={() => setIsSpecEditorOpen(false)}
+          productId={selectedProductId}
+          productSlug={selectedProduct.slug}
+          onSaveSuccess={() => {
+            // Optionally refresh something
+            toast({
+              title: 'Success',
+              description: 'Specification updated successfully',
+            });
+          }}
+        />
+      )}
     </div>
   );
 }

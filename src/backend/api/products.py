@@ -13,10 +13,15 @@ from backend.api.schemas import (
     ProductResponse,
     ProductUpdate,
     ReferenceImageResponse,
+    SpecificationResponse,
+    SpecificationCreate,
+    SpecificationListResponse,
 )
 from backend.api.dependencies import get_current_user
 from backend.services.storage import storage_service
 from backend.services.product import product_service
+from backend.services.specification import specification_service
+from backend.services.reference_image import reference_image_service
 from backend.utils.images import validate_and_process_image
 
 router = APIRouter(prefix="/products", tags=["Products"])
@@ -74,7 +79,124 @@ def delete_product(
     product_service.delete_product(db, product_id)
 
 
+# ===== Specification Endpoints =====
+
+
+@router.get("/{product_id}/specifications", response_model=List[SpecificationListResponse])
+def list_specifications(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List all specification versions for a product."""
+    specs = specification_service.get_specifications(db, product_id)
+    
+    # Add preview for list view
+    response = []
+    for spec in specs:
+        spec_dict = {
+            "id": spec.id,
+            "product_id": spec.product_id,
+            "version": spec.version,
+            "is_active": spec.is_active,
+            "created_at": spec.created_at,
+            "change_notes": spec.change_notes,
+            "yaml_preview": spec.yaml_content[:200] + "..." if len(spec.yaml_content) > 200 else spec.yaml_content,
+        }
+        response.append(spec_dict)
+    
+    return response
+
+
+@router.get("/{product_id}/specifications/{spec_id}", response_model=SpecificationResponse)
+def get_specification(
+    product_id: int,
+    spec_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get a specific specification version with full YAML content."""
+    return specification_service.get_specification(db, product_id, spec_id)
+
+
+@router.post("/{product_id}/specifications", response_model=SpecificationResponse, status_code=status.HTTP_201_CREATED)
+def create_specification(
+    product_id: int,
+    spec_data: SpecificationCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Create a new specification version."""
+    return specification_service.create_specification(
+        db,
+        product_id,
+        spec_data.yaml_content,
+        current_user.id,
+        spec_data.change_notes,
+    )
+
+
+@router.put("/{product_id}/specifications/{spec_id}/activate", response_model=SpecificationResponse)
+def activate_specification(
+    product_id: int,
+    spec_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Activate a specification version (rollback to previous version)."""
+    return specification_service.activate_specification(db, spec_id)
+
+
 # ===== Reference Image Endpoints =====
+
+
+@router.get("/{product_id}/reference-images", response_model=List[ReferenceImageResponse])
+def list_reference_images(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List all reference images for a product."""
+    return reference_image_service.get_reference_images(db, product_id)
+
+
+@router.post("/{product_id}/reference-images", response_model=ReferenceImageResponse, status_code=status.HTTP_201_CREATED)
+async def upload_reference_image(
+    product_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Upload a reference image for a product (max 4 total)."""
+    return reference_image_service.upload_reference_image(
+        db, product_id, file, current_user.id
+    )
+
+
+@router.delete("/{product_id}/reference-images/{image_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_reference_image(
+    product_id: int,
+    image_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete a reference image."""
+    reference_image_service.delete_reference_image(db, image_id)
+
+
+@router.put("/{product_id}/reference-images/{image_id}/order", response_model=ReferenceImageResponse)
+def update_reference_image_order(
+    product_id: int,
+    image_id: int,
+    order: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update the display order of a reference image."""
+    return reference_image_service.update_display_order(db, image_id, order)
+
+
+# ===== Legacy Reference Image Endpoints (deprecated) =====
 
 
 @router.post(
