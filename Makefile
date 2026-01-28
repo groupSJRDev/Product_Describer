@@ -1,12 +1,16 @@
 # Product Describer Makefile
 # Simplifies common operations for analyzing and generating product images
 
-.PHONY: help describe generate test install setup clean format lint
+.PHONY: help describe generate test install setup clean format lint up down
 
 # Default target - show help
 help:
 	@echo "Product Describer - Makefile Commands"
 	@echo "======================================"
+	@echo ""
+	@echo "Infrastructure:"
+	@echo "  make up             Start backend and frontend"
+	@echo "  make down           Stop backend services"
 	@echo ""
 	@echo "Setup:"
 	@echo "  make install        Install dependencies with Poetry"
@@ -112,3 +116,10 @@ workflow:
 	@make generate
 	@echo ""
 	@echo "✓ Workflow complete!"
+
+# Infrastructure commands
+up:
+	@./scripts/start.sh
+
+down:
+	@./scripts/stop.sh

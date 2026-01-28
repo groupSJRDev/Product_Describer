@@ -15,23 +15,23 @@ def seed_admin_user():
         if existing_admin:
             print("Admin user already exists.")
             return
-        
+
         # Create admin user
         admin_user = User(
             username="admin",
             hashed_password=get_password_hash("admin123"),
             email="admin@productdescriber.local",
-            is_active=True
+            is_active=True,
         )
         db.add(admin_user)
         db.commit()
         db.refresh(admin_user)
-        
+
         print(f"✅ Admin user created successfully!")
         print(f"   Username: admin")
         print(f"   Password: admin123")
         print(f"   User ID: {admin_user.id}")
-        
+
     except Exception as e:
         db.rollback()
         print(f"❌ Error creating admin user: {e}")

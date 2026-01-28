@@ -31,7 +31,7 @@ RUN curl -sSL https://install.python-poetry.org | python3 -
 WORKDIR $PYSETUP_PATH
 
 # Copy project requirements
-COPY pyproject.toml poetry.lock ./
+COPY pyproject.toml ./
 
 # Install runtime dependencies (no dev deps)
 RUN poetry install --without dev --no-root
@@ -40,7 +40,10 @@ RUN poetry install --without dev --no-root
 WORKDIR /app
 
 # Copy application code
-COPY . /app/
+COPY src /app/src
+COPY alembic /app/alembic
+COPY alembic.ini /app/
+COPY entrypoint.sh /app/
 
 # Make entrypoint executable
 RUN chmod +x /app/entrypoint.sh

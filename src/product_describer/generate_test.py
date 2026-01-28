@@ -6,6 +6,7 @@ using Google's Gemini 3 Pro Image model (Nano Banana Pro).
 
 import os
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any
@@ -16,13 +17,18 @@ from PIL import Image
 try:
     from google import genai
     from google.genai import types
+    from google.genai.errors import ServerError
 except ImportError:
     print("Error: google-genai package not installed.")
     print("Install it with: poetry add google-genai")
     sys.exit(1)
 
 from product_describer.config import Config
-from product_describer.constants import GENERATION_PROMPT_FILENAME
+from product_describer.constants import (
+    GENERATION_PROMPT_FILENAME,
+    MAX_RETRY_ATTEMPTS,
+    RETRY_BACKOFF_FACTOR,
+)
 from product_describer.exceptions import ConfigurationError, APIError
 from product_describer.logger import setup_logger
 
@@ -33,8 +39,10 @@ try:
     from backend.utils.specs import extract_critical_specs
 except ImportError:
     import sys
+
     sys.path.append(str(Path(__file__).parent.parent))
     from backend.utils.specs import extract_critical_specs
+
 
 def load_yaml_specs(yaml_path: Path) -> str:
     """Load YAML specifications and convert to formatted string.
