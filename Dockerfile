@@ -41,6 +41,7 @@ WORKDIR /app
 
 # Copy application code
 COPY src /app/src
+COPY templates /app/templates
 COPY alembic /app/alembic
 COPY alembic.ini /app/
 COPY entrypoint.sh /app/
