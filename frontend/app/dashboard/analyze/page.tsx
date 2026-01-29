@@ -5,9 +5,10 @@ import { useProducts } from '@/hooks/useProducts';
 import { ProductSelector } from '@/components/dashboard/ProductSelector';
 import { ImageUploadGrid } from '@/components/analyze/ImageUploadGrid';
 import { AnalysisProgress } from '@/components/analyze/AnalysisProgress';
-import { Sparkles, Layers } from 'lucide-react';
+import { Sparkles, Layers, Loader2, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 interface UploadedImage {
   file: File;
@@ -18,6 +19,7 @@ interface UploadedImage {
 
 export default function AnalyzePage() {
   const { products, isLoading: isLoadingProducts, refreshProducts } = useProducts();
+  const router = useRouter();
   const [mode, setMode] = useState<'create' | 'existing'>('existing');
   const [newProductName, setNewProductName] = useState('');
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
@@ -25,6 +27,7 @@ export default function AnalyzePage() {
   const [analysisStatus, setAnalysisStatus] = useState<'idle' | 'uploading' | 'analyzing' | 'complete' | 'error'>('idle');
   const [analysisMessage, setAnalysisMessage] = useState('');
   const [progress, setProgress] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
   // Select first product by default
@@ -83,14 +86,52 @@ export default function AnalyzePage() {
     }
   };
 
+  const handleDeleteProduct = async () => {
+    if (!selectedProductId) return;
+    
+    const product = products.find(p => p.id === selectedProductId);
+    if (!product) return;
+
+    if (!confirm(`Are you sure you want to delete "${product.name}"? This will permanently remove the product and all associated data.`)) {
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      await api.delete(`/products/${selectedProductId}`);
+      
+      toast({
+        title: 'Product Deleted',
+        description: `"${product.name}" has been deleted successfully.`,
+      });
+
+      // Reset state
+      setSelectedProductId(null);
+      setImages([]);
+      
+      // Refresh products list
+      await refreshProducts();
+      
+    } catch (error: any) {
+      console.error('Failed to delete product:', error);
+      toast({
+        title: 'Delete Failed',
+        description: error.response?.data?.detail || 'Failed to delete product. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const selectedProduct = products.find(p => p.id === selectedProductId);
   const selectedImages = images.filter(img => img.selected);
   const canAnalyze = 
-    (mode === 'existing' && selectedProductId && images.length > 0 && selectedImages.length === 4) ||
-    (mode === 'create' && newProductName.trim() && images.length > 0 && selectedImages.length === 4);
+    (mode === 'existing' && selectedProductId && images.length > 0) ||
+    (mode === 'create' && newProductName.trim() && images.length > 0);
 
   const handleAnalyze = async () => {
-    if (selectedImages.length !== 4) return;
+    if (images.length === 0) return;
 
     let productId = selectedProductId;
 
@@ -160,13 +201,29 @@ export default function AnalyzePage() {
 
       if (!productId) return;
 
-      // Only upload NEW images (not existing ones)
-      const newImagesToUpload = selectedImages.filter(img => !img.existingId);
+      // Delete all existing reference images first to avoid hitting the limit
+      try {
+        const existingImages = await api.get(`/products/${productId}/reference-images`);
+        if (existingImages.data && existingImages.data.length > 0) {
+          setAnalysisStatus('uploading');
+          setProgress(5);
+          setAnalysisMessage('Removing old reference images...');
+          
+          for (const img of existingImages.data) {
+            await api.delete(`/products/${productId}/reference-images/${img.id}`);
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to delete old images:', error);
+      }
+
+      // Only upload NEW images (not existing ones) - upload ALL for analysis
+      const newImagesToUpload = images.filter(img => !img.existingId && img.file);
       
       if (newImagesToUpload.length > 0) {
         setAnalysisStatus('uploading');
         setProgress(20);
-        setAnalysisMessage(`Uploading ${newImagesToUpload.length} new reference images...`);
+        setAnalysisMessage(`Uploading ${newImagesToUpload.length} images for analysis...`);
 
         let uploadedCount = 0;
         for (const img of newImagesToUpload) {
@@ -195,29 +252,17 @@ export default function AnalyzePage() {
 
       setProgress(100);
       setAnalysisStatus('complete');
-      setAnalysisMessage('Analysis complete! Specification has been created.');
+      setAnalysisMessage('Analysis complete! Redirecting to review...');
 
       toast({
-        title: 'Success',
-        description: `Product specification v${response.data.version} created successfully`,
+        title: 'Analysis Complete',
+        description: `Product specification v${response.data.version} created successfully.`,
       });
 
-      toast({
-        title: 'Reference Images Saved',
-        description: `${selectedImages.length} images saved as reference images`,
-      });
-
-      // Reset after 3 seconds
+      // Redirect to results review page
       setTimeout(() => {
-        setImages([]);
-        setAnalysisStatus('idle');
-        setProgress(0);
-        setNewProductName('');
-        if (mode === 'create') {
-          setSelectedProductId(productId);
-          setMode('existing');
-        }
-      }, 3000);
+        router.push(`/dashboard/analyze/review?productId=${productId}&specId=${response.data.id}`);
+      }, 1000);
 
     } catch (error: any) {
       console.error('Analysis failed:', error);
@@ -282,12 +327,33 @@ export default function AnalyzePage() {
 
         {/* Existing Product Selector */}
         {mode === 'existing' && (
-          <ProductSelector
-            products={products}
-            selectedId={selectedProductId}
-            onSelect={handleProductChange}
-            isLoading={isLoadingProducts}
-          />
+          <div className="space-y-3">
+            <ProductSelector
+              products={products}
+              selectedId={selectedProductId}
+              onSelect={handleProductChange}
+              isLoading={isLoadingProducts}
+            />
+            {selectedProductId && (
+              <button
+                onClick={handleDeleteProduct}
+                disabled={isDeleting || analysisStatus === 'uploading' || analysisStatus === 'analyzing'}
+                className="flex items-center gap-2 rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all w-full justify-center"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4" />
+                    Delete Product
+                  </>
+                )}
+              </button>
+            )}
+          </div>
         )}
 
         {/* New Product Name Input */}
@@ -319,8 +385,7 @@ export default function AnalyzePage() {
               Product Analysis
             </h1>
             <p className="text-sm text-gray-600">
-              Upload up to 20 images of your product, select 4 to keep as reference images, 
-              then analyze to generate a detailed specification.
+              Upload up to 20 images of your product to analyze. After analysis, you'll select 4 to save as reference images.
             </p>
           </div>
 
@@ -347,35 +412,30 @@ export default function AnalyzePage() {
               onImagesChange={setImages}
               onDeleteExisting={handleDeleteExistingImage}
               maxImages={20}
-              maxSelected={4}
+              requireSelection={false}
             />
           </div>
 
           {/* Analyze Button */}
-          {images.length > 0 && (
+          {images.length > 0 && analysisStatus !== 'complete' && (
             <div className="flex items-center justify-center gap-4">
               <button
                 onClick={handleAnalyze}
                 disabled={!canAnalyze || analysisStatus === 'uploading' || analysisStatus === 'analyzing'}
                 className="flex items-center gap-2 rounded-md bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-3 text-sm font-medium text-white hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
-                <Sparkles className="h-5 w-5" />
-                Analyze Product
+                {analysisStatus === 'uploading' || analysisStatus === 'analyzing' ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    Analyze {images.length} Image{images.length !== 1 ? 's' : ''}
+                  </>
+                )}
               </button>
-              
-              {!canAnalyze && images.length > 0 && (
-                <p className="text-sm text-gray-600">
-                  {selectedImages.length < 4 
-                    ? `Select ${4 - selectedImages.length} more image${4 - selectedImages.length !== 1 ? 's' : ''} to continue`
-                    : selectedImages.length > 4
-                    ? `Deselect ${selectedImages.length - 4} image${selectedImages.length - 4 !== 1 ? 's' : ''}`
-                    : mode === 'existing' && !selectedProductId
-                    ? 'Select a product to continue'
-                    : mode === 'create' && !newProductName.trim()
-                    ? 'Enter a product name to continue'
-                    : ''}
-                </p>
-              )}
             </div>
           )}
 

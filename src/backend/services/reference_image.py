@@ -50,17 +50,17 @@ class ReferenceImageService:
                 status_code=status.HTTP_404_NOT_FOUND, detail="Product not found"
             )
 
-        # Check if we already have 4 images
+        # Check if we already have 20 images (max for analysis)
         existing_count = (
             db.query(ProductReferenceImage)
             .filter(ProductReferenceImage.product_id == product_id)
             .count()
         )
 
-        if existing_count >= 4:
+        if existing_count >= 20:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Maximum of 4 reference images allowed per product",
+                detail="Maximum of 20 reference images allowed per product",
             )
 
         # Validate file type

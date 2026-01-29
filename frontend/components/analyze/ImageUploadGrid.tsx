@@ -15,6 +15,7 @@ interface ImageUploadGridProps {
   onDeleteExisting?: (imageId: number) => Promise<void>;
   maxImages?: number;
   maxSelected?: number;
+  requireSelection?: boolean;
 }
 
 export function ImageUploadGrid({
@@ -23,6 +24,7 @@ export function ImageUploadGrid({
   onDeleteExisting,
   maxImages = 20,
   maxSelected = 4,
+  requireSelection = false,
 }: ImageUploadGridProps) {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -74,6 +76,8 @@ export function ImageUploadGrid({
   };
 
   const handleToggleSelect = (index: number) => {
+    if (!requireSelection) return; // Don't allow selection if not required
+    
     const selectedCount = images.filter((img) => img.selected).length;
     const newImages = [...images];
     
@@ -124,7 +128,7 @@ export function ImageUploadGrid({
       )}
 
       {/* Selection Counter */}
-      {images.length > 0 && (
+      {images.length > 0 && requireSelection && (
         <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
           <div className="flex items-center gap-2">
             <Check className="h-5 w-5 text-blue-600" />
@@ -134,7 +138,12 @@ export function ImageUploadGrid({
           </div>
           {selectedCount === maxSelected && (
             <span className="text-xs text-blue-600 font-medium">
-              Maximum reached
+              Ready to save
+            </span>
+          )}
+          {selectedCount < maxSelected && (
+            <span className="text-xs text-gray-600">
+              Select {maxSelected - selectedCount} more
             </span>
           )}
         </div>
@@ -147,14 +156,15 @@ export function ImageUploadGrid({
             <div
               key={index}
               className={`
-                relative group aspect-square rounded-lg overflow-hidden border-2 transition-all cursor-pointer
+                relative group aspect-square rounded-lg overflow-hidden border-2 transition-all
+                ${requireSelection ? 'cursor-pointer' : ''}
                 ${
-                  image.selected
+                  image.selected && requireSelection
                     ? 'border-blue-500 ring-2 ring-blue-200'
                     : 'border-gray-200 hover:border-gray-300'
                 }
               `}
-              onClick={() => handleToggleSelect(index)}
+              onClick={() => requireSelection && handleToggleSelect(index)}
             >
               <img
                 src={image.preview}
@@ -163,18 +173,20 @@ export function ImageUploadGrid({
               />
 
               {/* Selection Indicator */}
-              <div
-                className={`
-                  absolute top-2 left-2 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all
-                  ${
-                    image.selected
-                      ? 'bg-blue-600 border-blue-600'
-                      : 'bg-white/80 backdrop-blur-sm border-gray-300 group-hover:border-blue-400'
-                  }
-                `}
-              >
-                {image.selected && <Check className="h-4 w-4 text-white" />}
-              </div>
+              {requireSelection && (
+                <div
+                  className={`
+                    absolute top-2 left-2 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all
+                    ${
+                      image.selected
+                        ? 'bg-blue-600 border-blue-600'
+                        : 'bg-white/80 backdrop-blur-sm border-gray-300 group-hover:border-blue-400'
+                    }
+                  `}
+                >
+                  {image.selected && <Check className="h-4 w-4 text-white" />}
+                </div>
+              )}
 
               {/* Remove Button */}
               <button
