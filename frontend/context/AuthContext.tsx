@@ -26,22 +26,23 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
-    // Initialize state from localStorage
-    if (typeof window !== 'undefined') {
-      const savedUser = localStorage.getItem('user');
-      if (savedUser) {
-        try {
-          return JSON.parse(savedUser);
-        } catch (e) {
-          console.error("Failed to parse user", e);
-        }
+  // Always initialize with null to avoid hydration mismatch
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+
+  // Load user from localStorage after mount (client-side only)
+  useEffect(() => {
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (e) {
+        console.error("Failed to parse user", e);
       }
     }
-    return null;
-  });
-  const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
+    setIsLoading(false);
+  }, []);
 
   const login = (token: string, username: string) => {
     localStorage.setItem('token', token);
