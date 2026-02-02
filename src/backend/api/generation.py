@@ -106,7 +106,40 @@ def list_product_generations(
         raise HTTPException(status_code=404, detail="Product not found")
 
     requests = generation_service.get_product_generations(product_id, db, skip, limit)
-    return requests
+    
+    # Transform to response format with generated_images
+    return [
+        GenerationResponse(
+            id=req.id,
+            product_id=req.product_id,
+            specification_id=req.specification_id,
+            prompt=req.prompt,
+            custom_prompt_override=req.custom_prompt_override,
+            aspect_ratio=req.aspect_ratio,
+            image_count=req.image_count,
+            status=req.status,
+            created_at=req.created_at,
+            started_at=req.started_at,
+            completed_at=req.completed_at,
+            error_message=req.error_message,
+            generated_images=[
+                GeneratedImageResponse(
+                    id=img.id,
+                    generation_request_id=img.generation_request_id,
+                    product_id=img.product_id,
+                    filename=img.filename,
+                    storage_path=img.storage_path,
+                    file_size_bytes=img.file_size_bytes,
+                    width=img.width,
+                    height=img.height,
+                    generation_index=img.generation_index,
+                    created_at=img.created_at,
+                )
+                for img in req.images
+            ],
+        )
+        for req in requests
+    ]
 
 
 @router.get(

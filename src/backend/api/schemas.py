@@ -163,6 +163,7 @@ class GenerationResponse(BaseModel):
     product_id: int
     specification_id: Optional[int]
     prompt: str
+    custom_prompt_override: Optional[str] = None
     aspect_ratio: str
     image_count: int
     status: str
@@ -170,8 +171,7 @@ class GenerationResponse(BaseModel):
     started_at: Optional[datetime]
     completed_at: Optional[datetime]
     error_message: Optional[str]
-    generated_images: List[GeneratedImageResponse] = Field(default=[], alias="images")
+    generated_images: List[GeneratedImageResponse] = Field(default_factory=list)
 
     class Config:
         from_attributes = True
-        populate_by_name = True
