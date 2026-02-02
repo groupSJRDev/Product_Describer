@@ -1,6 +1,5 @@
 import { useState, useRef } from 'react';
-import { Upload, X, Loader2, Check } from 'lucide-react';
-import Image from 'next/image';
+import { Upload, X, Check } from 'lucide-react';
 
 interface UploadedImage {
   file: File;

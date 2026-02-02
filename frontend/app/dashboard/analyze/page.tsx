@@ -125,7 +125,6 @@ export default function AnalyzePage() {
   };
 
   const selectedProduct = products.find(p => p.id === selectedProductId);
-  const selectedImages = images.filter(img => img.selected);
   const canAnalyze = 
     (mode === 'existing' && selectedProductId && images.length > 0) ||
     (mode === 'create' && newProductName.trim() && images.length > 0);
@@ -385,7 +384,7 @@ export default function AnalyzePage() {
               Product Analysis
             </h1>
             <p className="text-sm text-gray-600">
-              Upload up to 20 images of your product to analyze. After analysis, you'll select 4 to save as reference images.
+              Upload up to 20 images of your product to analyze. After analysis, you&apos;ll select 4 to save as reference images.
             </p>
           </div>
 

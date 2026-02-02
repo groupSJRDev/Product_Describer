@@ -48,8 +48,8 @@ function GenerationCard({ generation, onDelete }: { generation: GenerationReques
     const isFailed = generation.status === 'failed';
     const isProcessing = generation.status === 'processing' || generation.status === 'pending';
     
-    // Handle both possible field names (API alias vs internal)
-    const images = generation.images || (generation as any).generated_images;
+    // Get generated images
+    const images = generation.generated_images;
     const hasImages = images && images.length > 0;
     const imageUrl = hasImages ? getAssetUrl(images[0].storage_path) : '';
     

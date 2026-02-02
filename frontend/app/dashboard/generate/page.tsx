@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useProducts } from '@/hooks/useProducts';
 import { useGeneration } from '@/hooks/useGeneration';
 import { ProductSelector } from '@/components/dashboard/ProductSelector';

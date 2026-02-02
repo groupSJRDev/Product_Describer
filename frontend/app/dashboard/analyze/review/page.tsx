@@ -5,8 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { CheckCircle2, Save, ArrowLeft, Loader2, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
-import yaml from 'js-yaml';
-import Image from 'next/image';
+import * as yaml from 'js-yaml';
 
 interface UploadedImage {
   id: number;
