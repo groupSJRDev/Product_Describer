@@ -9,6 +9,7 @@ import { Sparkles, Layers, Loader2, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import type { Product } from '@/lib/types';
 
 interface UploadedImage {
   file: File;
@@ -47,8 +48,8 @@ export default function AnalyzePage() {
   const loadExistingImages = async (productId: number) => {
     try {
       const response = await api.get(`/products/${productId}/reference-images`);
-      const existingImages: UploadedImage[] = response.data.map((img: any) => ({
-        file: null as any, // Existing images don't have a File object
+      const existingImages: UploadedImage[] = response.data.map((img: { id: number; filename: string; storage_path: string }) => ({
+        file: null as unknown as File, // Existing images don't have a File object
         preview: `http://localhost:8001/files/${img.storage_path.replace('local_storage/', '')}`,
         selected: false,
         existingId: img.id,
@@ -112,11 +113,12 @@ export default function AnalyzePage() {
       // Refresh products list
       await refreshProducts();
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to delete product:', error);
+      const errorMsg = (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'detail' in error.response.data) ? String(error.response.data.detail) : 'Failed to delete product. Please try again.';
       toast({
         title: 'Delete Failed',
-        description: error.response?.data?.detail || 'Failed to delete product. Please try again.',
+        description: errorMsg,
         variant: 'destructive',
       });
     } finally {
@@ -158,7 +160,7 @@ export default function AnalyzePage() {
         setAnalysisMessage('Creating product...');
 
         // Generate base slug
-        let slug = newProductName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+        const slug = newProductName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
         
         // Try to create with base slug, if conflict, append timestamp
         let createAttempts = 0;
@@ -173,8 +175,9 @@ export default function AnalyzePage() {
               slug: attemptSlug,
             });
             createSuccess = true;
-          } catch (err: any) {
-            if (err.response?.status === 400 && err.response?.data?.detail?.includes('already exists')) {
+          } catch (err: unknown) {
+            const error = err as { response?: { status?: number; data?: { detail?: string } } };
+            if (error.response?.status === 400 && error.response?.data?.detail?.includes('already exists')) {
               createAttempts++;
               if (createAttempts >= 3) {
                 throw new Error(`Unable to create product: ${newProductName} (slug conflict)`);
@@ -247,7 +250,9 @@ export default function AnalyzePage() {
       setAnalysisMessage('Running GPT Vision analysis...');
 
       // Trigger analysis (uses the reference images we just uploaded)
-      const response = await api.post(`/products/${productId}/analyze`);
+      const response = await api.post<{ id: number; product_id: number; version: number }>(`/products/${productId}/analyze`, {
+        use_template: true
+      });
 
       setProgress(100);
       setAnalysisStatus('complete');
@@ -263,21 +268,24 @@ export default function AnalyzePage() {
         router.push(`/dashboard/analyze/review?productId=${productId}&specId=${response.data.id}`);
       }, 1000);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Analysis failed:', error);
-      console.error('Error response:', error.response?.data);
+      if (error && typeof error === 'object' && 'response' in error) {
+        console.error('Error response:', (error as { response?: { data?: unknown } }).response?.data);
+      }
       console.error('Full error object:', JSON.stringify(error, null, 2));
       
       let errorMessage = 'Failed to analyze product';
-      if (error.response?.data?.detail) {
-        if (typeof error.response.data.detail === 'string') {
-          errorMessage = error.response.data.detail;
-        } else if (Array.isArray(error.response.data.detail)) {
-          errorMessage = error.response.data.detail.map((d: any) => d.msg).join(', ');
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'detail' in error.response.data) {
+        const detail = (error.response.data as { detail?: unknown }).detail;
+        if (typeof detail === 'string') {
+          errorMessage = detail;
+        } else if (Array.isArray(detail)) {
+          errorMessage = detail.map((d: { msg?: string }) => d.msg || 'Error').join(', ');
         }
-      } else if (error.response?.status === 500) {
+      } else if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'status' in error.response && error.response.status === 500) {
         errorMessage = 'Server error occurred during analysis. Please check that your OpenAI API key is configured and try again.';
-      } else if (error.message) {
+      } else if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
         errorMessage = error.message;
       }
       

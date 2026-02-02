@@ -1,6 +1,6 @@
 import * as React from "react"
 
-type ToastActionElement = React.ReactElement<any>
+type ToastActionElement = React.ReactElement<Record<string, unknown>>
 
 export interface Toast {
   id: string
@@ -31,22 +31,23 @@ function genId() {
   return count.toString()
 }
 
+type ActionType = typeof actionTypes[keyof typeof actionTypes]
 
 type Action =
   | {
-      type: ActionType["ADD_TOAST"]
+      type: typeof actionTypes.ADD_TOAST
       toast: ToasterToast
     }
   | {
-      type: ActionType["UPDATE_TOAST"]
+      type: typeof actionTypes.UPDATE_TOAST
       toast: Partial<ToasterToast>
     }
   | {
-      type: ActionType["DISMISS_TOAST"]
+      type: typeof actionTypes.DISMISS_TOAST
       toastId?: ToasterToast["id"]
     }
   | {
-      type: ActionType["REMOVE_TOAST"]
+      type: typeof actionTypes.REMOVE_TOAST
       toastId?: ToasterToast["id"]
     }
 

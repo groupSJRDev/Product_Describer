@@ -14,7 +14,10 @@ import { useToast } from '@/hooks/use-toast';
 
 export default function GeneratePage() {
   const { products, isLoading: isLoadingProducts } = useProducts();
-  const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(() => {
+    // Initialize with first product if available
+    return products.length > 0 ? products[0].id : null;
+  });
   const [isSpecEditorOpen, setIsSpecEditorOpen] = useState(false);
   const { toast } = useToast();
   
@@ -32,13 +35,6 @@ export default function GeneratePage() {
         fetchHistory();
     }
   }, [selectedProductId, fetchHistory]);
-
-  // Select first product by default if available
-  useEffect(() => {
-    if (!selectedProductId && products.length > 0) {
-        setSelectedProductId(products[0].id);
-    }
-  }, [products, selectedProductId]);
 
   const handleGenerate = async (prompt: string, aspectRatio: string) => {
     if (!selectedProductId) return;

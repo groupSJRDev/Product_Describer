@@ -98,9 +98,9 @@ export function ReferenceImagesPanel({
 
       // Reload images
       await loadImages();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to upload images', err);
-      const errorMsg = err.response?.data?.detail || 'Failed to upload images';
+      const errorMsg = (err as { response?: { data?: { detail?: string } } }).response?.data?.detail || 'Failed to upload images';
       toast({
         title: 'Error',
         description: errorMsg,
@@ -131,9 +131,9 @@ export function ReferenceImagesPanel({
 
       // Reload images
       await loadImages();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to delete image', err);
-      const errorMsg = err.response?.data?.detail || 'Failed to delete image';
+      const errorMsg = (err && typeof err === 'object' && 'response' in err && err.response && typeof err.response === 'object' && 'data' in err.response && err.response.data && typeof err.response.data === 'object' && 'detail' in err.response.data) ? String(err.response.data.detail) : 'Failed to delete image';
       toast({
         title: 'Error',
         description: errorMsg,

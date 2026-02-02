@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { CheckCircle2, Save, ArrowLeft, Loader2, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import * as yaml from 'js-yaml';
+import type { Product, Specification } from '@/lib/types';
 
 interface UploadedImage {
   id: number;
@@ -26,9 +27,9 @@ function ReviewPageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [product, setProduct] = useState<any>(null);
-  const [specification, setSpecification] = useState<any>(null);
-  const [yamlSections, setYamlSections] = useState<any>({});
+  const [product, setProduct] = useState<Product | null>(null);
+  const [specification, setSpecification] = useState<Specification | null>(null);
+  const [yamlSections, setYamlSections] = useState<Record<string, unknown>>({});
   const [enabledSections, setEnabledSections] = useState<Record<string, boolean>>({});
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const [images, setImages] = useState<UploadedImage[]>([]);
@@ -52,8 +53,8 @@ function ReviewPageContent() {
       setSpecification(specResponse.data);
 
       // Parse YAML
-      const parsedYaml = yaml.load(specResponse.data.yaml_content);
-      setYamlSections(parsedYaml);
+      const parsedYaml = yaml.load(specResponse.data.yaml_content) as Record<string, unknown>;
+      setYamlSections(parsedYaml || {});
 
       // Initialize all sections as enabled
       const sections: Record<string, boolean> = {};
@@ -64,7 +65,7 @@ function ReviewPageContent() {
 
       // Load reference images
       const imagesResponse = await api.get(`/products/${productId}/reference-images`);
-      const loadedImages: UploadedImage[] = imagesResponse.data.map((img: any) => ({
+      const loadedImages: UploadedImage[] = imagesResponse.data.map((img: { id: number; filename: string; storage_path: string }) => ({
         id: img.id,
         filename: img.filename,
         storage_path: img.storage_path,
@@ -133,7 +134,7 @@ function ReviewPageContent() {
       setIsSaving(true);
 
       // Build filtered YAML with only enabled sections
-      const filteredYaml: any = {};
+      const filteredYaml: Record<string, unknown> = {};
       Object.keys(yamlSections).forEach(key => {
         if (enabledSections[key]) {
           filteredYaml[key] = yamlSections[key];
@@ -335,8 +336,8 @@ function ReviewPageContent() {
                     <div className="flex-1">
                       <div className="font-medium text-gray-900">{section}</div>
                       <div className="text-xs text-gray-500 mt-1">
-                        {typeof yamlSections[section] === 'object' 
-                          ? `${Object.keys(yamlSections[section]).length} properties`
+                        {typeof yamlSections[section] === 'object' && yamlSections[section] !== null && !Array.isArray(yamlSections[section])
+                          ? `${Object.keys(yamlSections[section] as object).length} properties`
                           : typeof yamlSections[section]}
                       </div>
                     </div>

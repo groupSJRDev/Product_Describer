@@ -111,9 +111,9 @@ export function SpecificationEditor({
 
       onSaveSuccess();
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to save specification', err);
-      const errorMsg = err.response?.data?.detail || 'Failed to save specification';
+      const errorMsg = (err && typeof err === 'object' && 'response' in err && err.response && typeof err.response === 'object' && 'data' in err.response && err.response.data && typeof err.response.data === 'object' && 'detail' in err.response.data) ? String(err.response.data.detail) : 'Failed to save specification';
       setError(errorMsg);
       toast({
         title: 'Error',
@@ -145,9 +145,9 @@ export function SpecificationEditor({
       await loadVersionHistory();
       await loadActiveSpecification();
       setActiveTab('edit');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to revert version', err);
-      const errorMsg = err.response?.data?.detail || 'Failed to revert version';
+      const errorMsg = (err && typeof err === 'object' && 'response' in err && err.response && typeof err.response === 'object' && 'data' in err.response && err.response.data && typeof err.response.data === 'object' && 'detail' in err.response.data) ? String(err.response.data.detail) : 'Failed to revert version';
       setError(errorMsg);
       toast({
         title: 'Error',
