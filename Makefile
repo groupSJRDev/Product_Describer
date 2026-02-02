@@ -1,7 +1,7 @@
 # Product Describer Makefile
 # Simplifies common operations for analyzing and generating product images
 
-.PHONY: help describe generate test install setup clean format lint up down
+.PHONY: help describe generate test install setup clean format lint up down test-backend test-frontend test-all
 
 # Default target - show help
 help:
@@ -20,13 +20,16 @@ help:
 	@echo "  make describe       Analyze product images and generate YAML specs"
 	@echo "                      Requires: PRODUCT_NAME set in .env"
 	@echo ""
+	@echo "Testing:"
+	@echo "  make test-all       Run all tests (backend + frontend)"
+	@echo "  make test-backend   Run backend tests with pytest"
+	@echo "  make test-frontend  Run frontend build and lint"
+	@echo ""
 	@echo "Generation:"
 	@echo "  make generate       Generate image using default or saved prompt"
-	@echo "  make test           Same as generate (alias)"
 	@echo ""
 	@echo "With custom prompt:"
 	@echo "  make generate PROMPT='Your custom prompt here'"
-	@echo "  make test PROMPT='Show product on marble background'"
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  make format         Format code with Black"
@@ -79,8 +82,33 @@ generate:
 		poetry run python -m product_describer.generate_test; \
 	fi
 
-# Alias for generate
-test: generate
+# Run backend tests
+test-backend:
+	@echo "Running backend tests..."
+	@echo "========================"
+	@poetry run pytest tests/ -v
+	@echo ""
+	@echo "✓ Backend tests complete!"
+
+# Run frontend tests
+test-frontend:
+	@echo "Running frontend tests..."
+	@echo "========================="
+	@echo ""
+	@echo "Building frontend..."
+	@cd frontend && npm run build
+	@echo ""
+	@echo "Running ESLint..."
+	@cd frontend && npm run lint
+	@echo ""
+	@echo "✓ Frontend tests complete!"
+
+# Run all tests
+test-all: test-backend test-frontend
+	@echo ""
+	@echo "=============================="
+	@echo "✓ All tests passed successfully!"
+	@echo "=============================="
 
 # Format code with Black
 format:
