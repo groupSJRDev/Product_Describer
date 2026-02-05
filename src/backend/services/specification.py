@@ -117,11 +117,13 @@ class SpecificationService:
 
         return new_spec
 
-    def activate_specification(
-        self, db: Session, spec_id: int
-    ) -> ProductSpecification:
+    def activate_specification(self, db: Session, spec_id: int) -> ProductSpecification:
         """Activate a specific specification version (rollback)."""
-        spec = db.query(ProductSpecification).filter(ProductSpecification.id == spec_id).first()
+        spec = (
+            db.query(ProductSpecification)
+            .filter(ProductSpecification.id == spec_id)
+            .first()
+        )
 
         if not spec:
             raise HTTPException(

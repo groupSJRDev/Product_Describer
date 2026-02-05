@@ -120,6 +120,7 @@ class SpecificationCreate(BaseModel):
 
 class SpecificationListResponse(BaseModel):
     """Lightweight specification response for list view."""
+
     id: int
     product_id: int
     version: int

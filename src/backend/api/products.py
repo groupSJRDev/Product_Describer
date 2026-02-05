@@ -82,7 +82,9 @@ def delete_product(
 # ===== Specification Endpoints =====
 
 
-@router.get("/{product_id}/specifications", response_model=List[SpecificationListResponse])
+@router.get(
+    "/{product_id}/specifications", response_model=List[SpecificationListResponse]
+)
 def list_specifications(
     product_id: int,
     db: Session = Depends(get_db),
@@ -90,7 +92,7 @@ def list_specifications(
 ):
     """List all specification versions for a product."""
     specs = specification_service.get_specifications(db, product_id)
-    
+
     # Add preview for list view
     response = []
     for spec in specs:
@@ -101,14 +103,18 @@ def list_specifications(
             "is_active": spec.is_active,
             "created_at": spec.created_at,
             "change_notes": spec.change_notes,
-            "yaml_preview": spec.yaml_content[:200] + "..." if len(spec.yaml_content) > 200 else spec.yaml_content,
+            "yaml_preview": spec.yaml_content[:200] + "..."
+            if len(spec.yaml_content) > 200
+            else spec.yaml_content,
         }
         response.append(spec_dict)
-    
+
     return response
 
 
-@router.get("/{product_id}/specifications/{spec_id}", response_model=SpecificationResponse)
+@router.get(
+    "/{product_id}/specifications/{spec_id}", response_model=SpecificationResponse
+)
 def get_specification(
     product_id: int,
     spec_id: int,
@@ -119,7 +125,11 @@ def get_specification(
     return specification_service.get_specification(db, product_id, spec_id)
 
 
-@router.post("/{product_id}/specifications", response_model=SpecificationResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{product_id}/specifications",
+    response_model=SpecificationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 def create_specification(
     product_id: int,
     spec_data: SpecificationCreate,
@@ -136,7 +146,10 @@ def create_specification(
     )
 
 
-@router.put("/{product_id}/specifications/{spec_id}/activate", response_model=SpecificationResponse)
+@router.put(
+    "/{product_id}/specifications/{spec_id}/activate",
+    response_model=SpecificationResponse,
+)
 def activate_specification(
     product_id: int,
     spec_id: int,
@@ -150,7 +163,9 @@ def activate_specification(
 # ===== Reference Image Endpoints =====
 
 
-@router.get("/{product_id}/reference-images", response_model=List[ReferenceImageResponse])
+@router.get(
+    "/{product_id}/reference-images", response_model=List[ReferenceImageResponse]
+)
 def list_reference_images(
     product_id: int,
     db: Session = Depends(get_db),
@@ -160,7 +175,11 @@ def list_reference_images(
     return reference_image_service.get_reference_images(db, product_id)
 
 
-@router.post("/{product_id}/reference-images", response_model=ReferenceImageResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{product_id}/reference-images",
+    response_model=ReferenceImageResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def upload_reference_image(
     product_id: int,
     file: UploadFile = File(...),
@@ -173,7 +192,9 @@ async def upload_reference_image(
     )
 
 
-@router.delete("/{product_id}/reference-images/{image_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{product_id}/reference-images/{image_id}", status_code=status.HTTP_204_NO_CONTENT
+)
 def delete_reference_image(
     product_id: int,
     image_id: int,
@@ -184,7 +205,10 @@ def delete_reference_image(
     reference_image_service.delete_reference_image(db, image_id)
 
 
-@router.put("/{product_id}/reference-images/{image_id}/order", response_model=ReferenceImageResponse)
+@router.put(
+    "/{product_id}/reference-images/{image_id}/order",
+    response_model=ReferenceImageResponse,
+)
 def update_reference_image_order(
     product_id: int,
     image_id: int,

@@ -23,7 +23,45 @@ Detailed system architecture, component design, and data flow diagrams.
 
 ---
 
-### 🚀 [Execution Plan](EXECUTION_PLAN.md)
+### �️ [Database Schema Documentation](DATABASE_SCHEMA.md)
+Complete database schema with ERD diagrams, relationships, and query examples.
+
+**Contents**:
+- Entity Relationship Diagrams (Mermaid)
+- Table structures and constraints
+- Workflow sequence diagrams
+- Storage architecture
+- Query examples and performance tips
+- Migration history
+
+**Read this if you want to**:
+- Understand the database design
+- Learn about data relationships
+- Write efficient queries
+- Plan schema extensions
+- Troubleshoot data issues
+
+---
+
+### 🔧 [Backend Database Plan](BACKEND_DATABASE_PLAN.md)
+Implementation plan and checklist for the backend API and database.
+
+**Contents**:
+- Database schema design (SQL)
+- API endpoint specifications
+- Implementation checklist
+- Integration strategy
+- Deployment configuration
+
+**Read this if you want to**:
+- Track backend implementation progress
+- Understand API design decisions
+- Review implementation requirements
+- Plan backend deployment
+
+---
+
+### �🚀 [Execution Plan](EXECUTION_PLAN.md)
 Step-by-step guide for running the application and handling common scenarios.
 
 **Contents**:
@@ -74,27 +112,45 @@ Complete guide for developers contributing to or extending the project.
 ### For Developers
 - **Setup**: Begin with [Developer Setup](DEVELOPER.md#development-setup)
 - **Architecture**: Review [Architecture Overview](ARCHITECTURE.md#system-overview)
+- **Database**: Check [Database Schema](DATABASE_SCHEMA.md)
 - **API Reference**: See [Module Documentation](DEVELOPER.md#module-documentation)
 - **Testing**: Read [Testing Guide](DEVELOPER.md#testing)
 
 ### For Maintainers
 - **Architecture**: [System Design](ARCHITECTURE.md)
+- **Database**: [Schema Documentation](DATABASE_SCHEMA.md)
+- **Backend Plan**: [Implementation Checklist](BACKEND_DATABASE_PLAN.md)
 - **Contributing**: [Contribution Guidelines](DEVELOPER.md#contributing)
 - **Deployment**: [Production Considerations](EXECUTION_PLAN.md#production-deployment-considerations)
 
 ## Document Relationships
 
-```
-README.md (You are here)
-    │
-    ├─→ ARCHITECTURE.md
-    │   └─→ System design and components
-    │
-    ├─→ EXECUTION_PLAN.md
-    │   └─→ How to run and use
-    │
-    └─→ DEVELOPER.md
-        └─→ How to develop and contribute
+```mermaid
+graph TB
+    README[README.md - You are here]
+    
+    ARCH[ARCHITECTURE.md<br/>System Design]
+    DB[DATABASE_SCHEMA.md<br/>Database ERD & Queries]
+    PLAN[BACKEND_DATABASE_PLAN.md<br/>Implementation Plan]
+    EXEC[EXECUTION_PLAN.md<br/>Usage Guide]
+    DEV[DEVELOPER.md<br/>Developer Guide]
+    
+    README --> ARCH
+    README --> DB
+    README --> PLAN
+    README --> EXEC
+    README --> DEV
+    
+    ARCH -.relates to.-> DB
+    DB -.implements.-> PLAN
+    PLAN -.deploys to.-> EXEC
+    
+    style README fill:#e1f5ff
+    style ARCH fill:#fff3e0
+    style DB fill:#f3e5f5
+    style PLAN fill:#e8f5e9
+    style EXEC fill:#e1bee7
+    style DEV fill:#c5cae9
 ```
 
 ## Documentation Standards

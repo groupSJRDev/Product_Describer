@@ -106,7 +106,7 @@ def list_product_generations(
         raise HTTPException(status_code=404, detail="Product not found")
 
     requests = generation_service.get_product_generations(product_id, db, skip, limit)
-    
+
     # Transform to response format with generated_images
     return [
         GenerationResponse(

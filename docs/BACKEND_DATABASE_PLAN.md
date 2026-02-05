@@ -12,6 +12,115 @@ Design a FastAPI backend with PostgreSQL database to support Product Describer w
 
 ## Database Schema Design
 
+### Schema Overview
+
+```mermaid
+erDiagram
+    users ||--o{ products : creates
+    users ||--o{ product_reference_images : uploads
+    users ||--o{ product_specifications : creates
+    users ||--o{ generation_requests : initiates
+    
+    products ||--o{ product_reference_images : "has many"
+    products ||--o{ product_specifications : "has many"
+    products ||--o{ generation_requests : "has many"
+    products ||--o{ generated_images : "has many"
+    
+    product_specifications ||--o{ generation_requests : "used by"
+    generation_requests ||--o{ generated_images : "produces"
+    
+    users {
+        int id PK
+        string username UK
+        string hashed_password
+        string email UK
+        boolean is_active
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    products {
+        int id PK
+        string name
+        string slug UK
+        text description
+        int created_by FK
+        timestamp created_at
+        timestamp updated_at
+        boolean is_active
+        string product_category
+        array tags
+    }
+    
+    product_reference_images {
+        int id PK
+        int product_id FK
+        string filename
+        string storage_path
+        int file_size_bytes
+        string mime_type
+        int width
+        int height
+        int uploaded_by FK
+        timestamp uploaded_at
+        boolean is_primary
+        int display_order
+    }
+    
+    product_specifications {
+        int id PK
+        int product_id FK
+        int version
+        text yaml_content
+        string template_version
+        decimal confidence_overall
+        int image_count
+        string analysis_model
+        boolean is_active
+        int created_by FK
+        timestamp created_at
+        text change_notes
+        jsonb primary_dimensions
+        jsonb primary_colors
+        string material_type
+    }
+    
+    generation_requests {
+        int id PK
+        int product_id FK
+        int specification_id FK
+        text prompt
+        text custom_prompt_override
+        string aspect_ratio
+        string resolution
+        int image_count
+        string model
+        string status
+        timestamp started_at
+        timestamp completed_at
+        text error_message
+        int created_by FK
+        timestamp created_at
+    }
+    
+    generated_images {
+        int id PK
+        int generation_request_id FK
+        int product_id FK
+        string filename
+        string storage_path
+        int file_size_bytes
+        string mime_type
+        int width
+        int height
+        int generation_index
+        text model_response_text
+        timestamp created_at
+    }
+```
+
+> **📄 Detailed Schema Documentation**: See [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) for comprehensive entity diagrams, workflows, and query examples.
+
 ### Core Tables
 
 #### 1. **users**
@@ -251,6 +360,57 @@ STORAGE_BUCKET_NAME = os.getenv("STORAGE_BUCKET_NAME", "")
 #               └── {timestamp}_{hash}.png
 ```
 
+### Storage Architecture Diagram
+
+```mermaid
+graph TB
+    subgraph "Local Storage Structure"
+        ROOT[local_storage/]
+        
+        PRODUCT1[stasher_half_gallon/]
+        PRODUCT2[stasher_4_cup_bag/]
+        
+        REFS1[refs/]
+        SPECS1[specs/]
+        GEN1[generated/]
+        
+        REF_IMG1[original_1.jpg]
+        REF_IMG2[original_2.jpg]
+        
+        SPEC_V1[v1.yaml]
+        SPEC_V2[v2.yaml]
+        
+        Y2026[2026/]
+        M02[02/]
+        IMG1[20260205_143022_abc123.png]
+        IMG2[20260205_143045_def456.png]
+        
+        ROOT --> PRODUCT1
+        ROOT --> PRODUCT2
+        
+        PRODUCT1 --> REFS1
+        PRODUCT1 --> SPECS1
+        PRODUCT1 --> GEN1
+        
+        REFS1 --> REF_IMG1
+        REFS1 --> REF_IMG2
+        
+        SPECS1 --> SPEC_V1
+        SPECS1 --> SPEC_V2
+        
+        GEN1 --> Y2026
+        Y2026 --> M02
+        M02 --> IMG1
+        M02 --> IMG2
+    end
+    
+    style ROOT fill:#e1f5ff
+    style PRODUCT1 fill:#fff3e0
+    style REFS1 fill:#f3e5f5
+    style SPECS1 fill:#e8f5e9
+    style GEN1 fill:#e1bee7
+```
+
 ---
 
 ## API Endpoints Design
@@ -442,6 +602,88 @@ class GeneratedImage(Base):
 # API receives upload → save to product_reference_images
 # API calls gpt_analyzer.py → save to product_specifications
 # API calls generate_test.py → save to generated_images
+```
+
+### Workflow Diagrams
+
+#### Product Creation & Analysis Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant API
+    participant DB
+    participant Storage
+    participant GPT
+    
+    User->>API: POST /api/products
+    API->>DB: INSERT INTO products
+    DB-->>API: product_id
+    API-->>User: Product created
+    
+    User->>API: POST /api/products/{id}/upload-references
+    API->>Storage: Save image files
+    Storage-->>API: storage_paths
+    API->>DB: INSERT INTO product_reference_images
+    DB-->>API: Success
+    API-->>User: Images uploaded
+    
+    User->>API: POST /api/products/{id}/analyze
+    API->>DB: SELECT images WHERE product_id
+    DB-->>API: image_paths
+    API->>GPT: Analyze images (GPT Vision)
+    GPT-->>API: YAML specification
+    API->>DB: INSERT INTO product_specifications (v1, is_active=true)
+    DB-->>API: specification_id
+    API-->>User: Analysis complete
+```
+
+#### Specification Version Control
+
+```mermaid
+stateDiagram-v2
+    [*] --> v1_active: Initial Analysis
+    v1_active --> v1_inactive: User edits YAML
+    v1_inactive --> v2_active: Save new version
+    v2_active --> v1_active: Revert to v1
+    v2_active --> v2_inactive: User edits again
+    v2_inactive --> v3_active: Save new version
+    
+    note right of v1_active: is_active=true<br/>All others false
+    note right of v2_active: Only one active<br/>at a time
+```
+
+#### Image Generation Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant API
+    participant DB
+    participant Worker
+    participant Gemini
+    participant Storage
+    
+    User->>API: POST /api/products/{id}/generate
+    API->>DB: INSERT generation_requests (status='pending')
+    DB-->>API: request_id
+    API->>Worker: BackgroundTasks.add_task()
+    API-->>User: Request submitted (request_id)
+    
+    Worker->>DB: UPDATE status='processing', started_at=now()
+    Worker->>DB: SELECT active specification
+    DB-->>Worker: YAML content
+    Worker->>Gemini: Generate images (with specs)
+    Gemini-->>Worker: Generated images
+    Worker->>Storage: Save images
+    Storage-->>Worker: storage_paths
+    Worker->>DB: INSERT generated_images (for each)
+    Worker->>DB: UPDATE status='completed', completed_at=now()
+    
+    User->>API: GET /api/generation-requests/{id}
+    API->>DB: SELECT request with images
+    DB-->>API: request details + images
+    API-->>User: Status: completed, 3 images
 ```
 
 ### Service Layer Structure
